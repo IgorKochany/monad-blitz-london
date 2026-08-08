@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" name="Buttons" subtitle="Primary / secondary / hover / disabled / accept bar" width="640" height="400" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Buttons</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .rowset { display: flex; flex-direction: column; gap: var(--s3); max-width: 600px; }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--body); margin-bottom: var(--s1); }
+  .btns { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--s1);
+    font-family: var(--ui); font-size: 15px; font-weight: 700; line-height: 1;
+    padding: 17px 26px; border-radius: var(--r); border: var(--border);
+    cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: transform .12s ease, background-color .12s ease, color .12s ease;
+  }
+  .btn-primary { background: var(--fg); color: var(--accent); }
+  .btn-primary:hover { background: var(--signal); color: #fff; transform: translateY(-2px); }
+  .btn-secondary { background: var(--bg); color: var(--fg); }
+  .btn-secondary:hover { background: var(--accent); transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn[disabled] { background: var(--muted); color: var(--body); border-color: var(--muted); cursor: not-allowed; transform: none; }
+  .accept { display: block; width: 100%; background: var(--fg); color: var(--accent); border: var(--border); border-radius: var(--r); padding: 15px; font-family: var(--ui); font-weight: 700; font-size: 15px; cursor: pointer; transition: background .12s ease, color .12s ease; }
+  .accept:hover { background: var(--signal); color: #fff; }
+</style>
+</head>
+<body>
+  <div class="rowset">
+    <div>
+      <div class="lbl">Primary — ink fill, yellow label. Hover: deep blue.</div>
+      <div class="btns"><button class="btn btn-primary" type="button">Post a ride</button><button class="btn btn-primary" type="button" style="background:var(--signal); color:#fff">Hover state</button></div>
+    </div>
+    <div>
+      <div class="lbl">Secondary — paper fill, 2px ink border. Hover: yellow fill.</div>
+      <div class="btns"><button class="btn btn-secondary" type="button">Drive and keep 100%</button><button class="btn btn-secondary" type="button" style="background:var(--accent)">Hover state</button></div>
+    </div>
+    <div>
+      <div class="lbl">Disabled — stone, no border contrast, no motion</div>
+      <div class="btns"><button class="btn" type="button" disabled>Post a ride</button></div>
+    </div>
+    <div>
+      <div class="lbl">Full-width accept bar — the driver's one-tap action</div>
+      <button class="accept" type="button">Accept this fare · £12.00</button>
+    </div>
+  </div>
+</body>
+</html>

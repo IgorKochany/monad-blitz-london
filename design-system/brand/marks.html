@@ -1,0 +1,34 @@
+<!-- @dsCard group="Brand" name="Wordmark & curb stripe" subtitle="Bricolage wordmark, hazard-stripe section rule, kicker tab" width="640" height="360" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Brand marks</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700&family=Public+Sans:wght@400;600&family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .set { display: flex; flex-direction: column; gap: var(--s4); max-width: 600px; }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--body); margin-bottom: var(--s2); }
+  .wordmark { font-family: var(--mark); font-weight: 800; font-size: 40px; letter-spacing: -0.02em; color: var(--fg); }
+  .wordmark span { background: var(--accent); border: var(--border); padding: 0 8px; margin-left: 2px; }
+  .curb { height: 10px; border-top: var(--border); border-bottom: var(--border);
+    background-image: repeating-linear-gradient(135deg, var(--accent) 0 12px, var(--bg) 12px 24px); }
+  .kicker { display: inline-block; background: var(--accent); border: var(--border); padding: 6px 12px; }
+  .ground { border: var(--border); height: 120px; border-radius: var(--r);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 212, 0, .30), transparent 62%),
+      repeating-linear-gradient(0deg, transparent 0 31px, rgba(22, 21, 15, .045) 31px 32px),
+      repeating-linear-gradient(90deg, transparent 0 31px, rgba(22, 21, 15, .045) 31px 32px); }
+</style>
+</head>
+<body>
+  <div class="set">
+    <div><div class="lbl">Wordmark — Bricolage Grotesque 800, second word on a bordered yellow tab</div><div class="wordmark">Fair<span>Ride</span></div></div>
+    <div><div class="lbl">Curb stripe — the one ornament, used as a section rule</div><div class="curb"></div></div>
+    <div><div class="lbl">Kicker tab — tracked caps on yellow</div><span class="kicker meta">London · Monad testnet</span></div>
+    <div><div class="lbl">Page ground — yellow wash + ruled grid, never a solid fill</div><div class="ground"></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!-- @dsCard group="Components" name="Fare split cards" subtitle="Comparison pair: muted 'them' card vs yellow-headed 'us' card, 66px price type" width="720" height="480" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Fare split</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .pricing { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); max-width: 680px; }
+  .plan { border: var(--border); border-radius: var(--r); background: var(--bg); display: flex; flex-direction: column; }
+  .plan .ph { padding: var(--s2) var(--s3); border-bottom: var(--border); }
+  .plan .pb { padding: var(--s3); flex: 1; display: flex; flex-direction: column; gap: var(--s2); }
+  .price { font-family: var(--display); font-size: 56px; font-weight: 800; letter-spacing: -0.045em; color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
+  .price small { display: block; font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--body); margin-top: var(--s1); }
+  .plan.them { border-color: var(--muted); }
+  .plan.them .ph { border-bottom-color: var(--muted); }
+  .plan.them .price { color: var(--body); }
+  .plan.us .ph { background: var(--accent); }
+  .plan.us .price { color: var(--signal); }
+  .lineitem { display: flex; justify-content: space-between; font-size: 14px; padding-bottom: var(--s1); border-bottom: 2px solid var(--muted); }
+  .lineitem b { color: var(--fg); }
+  .lineitem:last-child { border-bottom: 0; }
+</style>
+</head>
+<body>
+  <div class="pricing">
+    <div class="plan them">
+      <div class="ph"><span class="meta">A commission app</span></div>
+      <div class="pb">
+        <div class="price">£9.00<small>reaches the driver, after roughly 25% is taken</small></div>
+        <div class="lineitem"><span>Rider pays</span><b class="tnum">£12.00</b></div>
+        <div class="lineitem"><span>Platform commission</span><b class="tnum">−£3.00</b></div>
+        <div class="lineitem"><span>Payout</span><b>weekly</b></div>
+      </div>
+    </div>
+    <div class="plan us">
+      <div class="ph"><span class="meta">FairRide</span></div>
+      <div class="pb">
+        <div class="price">£12.00<small>reaches the driver, because nothing is deducted</small></div>
+        <div class="lineitem"><span>Rider pays</span><b class="tnum">£12.00</b></div>
+        <div class="lineitem"><span>Platform commission</span><b class="tnum">−£0.00</b></div>
+        <div class="lineitem"><span>Payout</span><b>on drop-off</b></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

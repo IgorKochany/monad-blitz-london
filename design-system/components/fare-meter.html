@@ -1,0 +1,46 @@
+<!-- @dsCard group="Components" name="Fare meter" subtitle="Ceiling on yellow, descending bids, inverted winner, blue refund bar" width="480" height="560" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Fare meter</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .meter { background: var(--accent); border: var(--border); border-radius: var(--r); max-width: 430px; }
+  .meter-hd { display: flex; justify-content: space-between; align-items: baseline; padding: var(--s2) var(--s3); border-bottom: var(--border); }
+  .meter-hd .rt { font-size: 12px; font-weight: 600; color: var(--fg); }
+  .ceiling { padding: var(--s3); border-bottom: var(--border); display: flex; justify-content: space-between; align-items: flex-end; }
+  .ceiling .fig { font-size: 54px; font-weight: 800; }
+  .ceiling .cap { font-size: 12px; font-weight: 600; color: var(--fg); text-align: right; line-height: 1.4; }
+  .ladder { padding: var(--s2) var(--s3) var(--s3); display: flex; flex-direction: column; gap: 6px; }
+  .bid { display: flex; align-items: center; gap: var(--s2); background: var(--bg); border: var(--border); border-radius: var(--r); padding: 11px 14px; }
+  .bid .who { font-size: 12px; font-weight: 600; color: var(--body); }
+  .bid .amt { margin-left: auto; font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .bid.win { background: var(--fg); }
+  .bid.win .who { color: var(--accent); font-weight: 700; }
+  .bid.win .amt { color: var(--accent); }
+  .bid.win .flag { font-size: 10px; font-weight: 700; letter-spacing: .1em; background: var(--accent); color: var(--fg); padding: 3px 6px; }
+  .refund { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); padding: 13px var(--s3); background: var(--signal); border-top: var(--border); }
+  .refund span { color: #fff; font-size: 13px; font-weight: 600; }
+  .refund b { font-family: var(--display); color: #fff; font-size: 19px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <figure class="meter" aria-label="Fare bid down from £14.00 to £11.10">
+    <div class="meter-hd"><span class="meta">Live fare</span><span class="rt">Shoreditch → Canary Wharf</span></div>
+    <div class="ceiling">
+      <div><div class="meta" style="margin-bottom:6px">Your ceiling</div><div class="fig tnum">£14.00</div></div>
+      <div class="cap">7.0 MON<br>escrowed</div>
+    </div>
+    <div class="ladder">
+      <div class="bid"><span class="who">driver 0x9f</span><span class="amt">£13.20</span></div>
+      <div class="bid"><span class="who">driver 0x3a</span><span class="amt">£12.50</span></div>
+      <div class="bid"><span class="who">driver 0x71</span><span class="amt">£11.75</span></div>
+      <div class="bid win"><span class="who">driver 0xfb</span><span class="flag">WINS</span><span class="amt">£11.10</span></div>
+    </div>
+    <figcaption class="refund"><span>Unspent ceiling, straight back to you</span><b>£2.90</b></figcaption>
+  </figure>
+</body>
+</html>

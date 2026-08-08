@@ -1,0 +1,33 @@
+<!-- @dsCard group="Tokens" name="Typography" subtitle="Manrope display · Public Sans UI · Bricolage Grotesque wordmark" width="720" height="460" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Typography</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600&family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .spec { display: flex; flex-direction: column; gap: var(--s3); max-width: 680px; }
+  .row { border-bottom: 2px solid var(--muted); padding-bottom: var(--s3); }
+  .row .lbl { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--body); margin-bottom: var(--s1); }
+  .h-display { font-family: var(--display); font-weight: 800; font-size: 44px; letter-spacing: -0.03em; color: var(--fg); line-height: 1.02; }
+  .h-fare { font-family: var(--display); font-weight: 800; font-size: 40px; letter-spacing: -0.045em; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .h-sub { font-family: var(--display); font-weight: 700; font-size: 21px; letter-spacing: -0.03em; color: var(--fg); }
+  .b-body { font-family: var(--ui); font-weight: 400; font-size: 14px; line-height: 1.65; color: var(--body); max-width: 56ch; }
+  .b-meta { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+  .h-mark { font-family: var(--mark); font-weight: 800; font-size: 30px; letter-spacing: -0.02em; color: var(--fg); }
+  .h-mark span { background: var(--accent); border: var(--border); padding: 0 6px; }
+</style>
+</head>
+<body>
+  <div class="spec">
+    <div class="row"><div class="lbl">Display · Manrope 800 · −0.03em</div><div class="h-display">The meter runs down.</div></div>
+    <div class="row"><div class="lbl">Fare figures · Manrope 800 · tabular numerals</div><div class="h-fare">£14.00 → £11.10</div></div>
+    <div class="row"><div class="lbl">Heading · Manrope 700 · 21px</div><div class="h-sub">Drivers bid under it</div></div>
+    <div class="row"><div class="lbl">Body · Public Sans 400 · 14px / 1.65 · olive-ink</div><p class="b-body">You post the most you're willing to pay. Drivers bid under it, competing for your ride. Lowest bid wins and keeps every penny of the fare.</p></div>
+    <div class="row"><div class="lbl">Meta label · Public Sans 600 · 12px · tracked caps</div><div class="b-meta">Available job · closes in 4m 12s</div></div>
+    <div class="row" style="border-bottom:0"><div class="lbl">Wordmark · Bricolage Grotesque 800 · yellow tab on the second word</div><div class="h-mark">Fair<span>Ride</span></div></div>
+  </div>
+</body>
+</html>

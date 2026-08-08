@@ -1,0 +1,62 @@
+<!-- @dsCard group="Components" name="Job card + empty state" subtitle="Driver surface: route stops, fare, chips, accept bar, quiet-street empty" width="480" height="560" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Job card</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .stack { max-width: 430px; display: flex; flex-direction: column; gap: var(--s2); }
+  .jobcard { background: var(--bg); border: var(--border); border-radius: var(--r); }
+  .jhd { display: flex; justify-content: space-between; align-items: center; padding: 11px var(--s3); border-bottom: var(--border); background: var(--accent); }
+  .jbody { padding: var(--s3); }
+  .jrow { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+  .stops { display: flex; flex-direction: column; gap: 14px; }
+  .stop { display: flex; align-items: center; gap: 11px; position: relative; }
+  .stop .dot { width: 12px; height: 12px; border: var(--border); flex: 0 0 auto; background: var(--bg); }
+  .stop.a .dot { border-radius: 50%; }
+  .stop.b .dot { background: var(--fg); }
+  .stop.a::after { content: ""; position: absolute; left: 5px; top: 16px; width: 2px; height: 14px; background: var(--fg); }
+  .stop .nm { font-size: 15px; font-weight: 600; color: var(--fg); }
+  .jfare { text-align: right; }
+  .jfare .fig { font-size: 34px; font-weight: 800; }
+  .jfare .u { font-size: 12px; font-weight: 600; color: var(--body); }
+  .jchips { display: flex; gap: var(--s1); flex-wrap: wrap; margin-top: var(--s3); }
+  .jchip { font-size: 12px; font-weight: 600; color: var(--fg); border: 2px solid var(--muted); padding: 4px 9px; font-variant-numeric: tabular-nums; }
+  .jchip.hot { border-color: var(--fg); background: var(--accent); }
+  .jaccept { display: block; width: 100%; margin-top: var(--s3); background: var(--fg); color: var(--accent); border: var(--border); border-radius: var(--r); padding: 15px; font-family: var(--ui); font-weight: 700; font-size: 15px; cursor: pointer; transition: background .12s ease, color .12s ease; }
+  .jaccept:hover { background: var(--signal); color: #fff; }
+  .empty { border: 2px dashed var(--muted); border-radius: var(--r); background: var(--bg); padding: var(--s4); text-align: center; }
+  .empty .fig { font-size: 15px; margin-bottom: 4px; }
+  .empty p { font-size: 13px; margin: 0 auto; max-width: 34ch; }
+</style>
+</head>
+<body>
+  <div class="stack">
+    <div class="jobcard">
+      <div class="jhd"><span class="meta">Available job</span><span class="meta">closes in 4m 12s</span></div>
+      <div class="jbody">
+        <div class="jrow">
+          <div class="stops">
+            <div class="stop a"><span class="dot"></span><span class="nm">London Bridge</span></div>
+            <div class="stop b"><span class="dot"></span><span class="nm">Stratford</span></div>
+          </div>
+          <div class="jfare"><div class="fig tnum">£12.00</div><div class="u tnum">6.00 MON</div></div>
+        </div>
+        <div class="jchips">
+          <span class="jchip">7.0 km</span>
+          <span class="jchip">~17 min</span>
+          <span class="jchip hot">Instant match</span>
+        </div>
+        <button class="jaccept" type="button">Accept this fare · £12.00</button>
+      </div>
+    </div>
+    <div class="empty">
+      <div class="fig">Quiet street right now</div>
+      <p>No open jobs within 3 km. New rides appear here the second someone posts one.</p>
+    </div>
+  </div>
+</body>
+</html>

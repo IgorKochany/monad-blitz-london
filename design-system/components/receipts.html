@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" name="Receipts table" subtitle="Verifiable settlement rows with stone header and yellow row hover" width="720" height="360" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Receipts</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<style>
+  .receipts { border: var(--border); border-radius: var(--r); background: var(--bg); max-width: 680px; }
+  .rrow { display: grid; grid-template-columns: 1.6fr 1fr .8fr auto; gap: var(--s3); align-items: center; padding: var(--s3); border-bottom: 2px solid var(--muted); }
+  .rrow:last-child { border-bottom: 0; }
+  .rrow:hover { background: rgba(255, 212, 0, .16); }
+  .rt { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .rs { font-size: 12px; color: var(--body); }
+  .rf { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--fg); text-align: right; font-variant-numeric: tabular-nums; }
+  .rk { font-size: 12px; font-weight: 700; color: var(--signal); text-align: right; }
+  .rhead { background: var(--muted); }
+  .rhead .meta { font-size: 11px; }
+  .rhead .r3, .rhead .r4 { text-align: right; }
+</style>
+</head>
+<body>
+  <div class="receipts">
+    <div class="rrow rhead">
+      <span class="meta">Route</span><span class="meta">Outcome</span>
+      <span class="meta r3">Fare</span><span class="meta r4">Driver kept</span>
+    </div>
+    <div class="rrow">
+      <div><div class="rt">London Bridge → Stratford</div><div class="rs">7.0 km · ride #4</div></div>
+      <div class="rs">Bid down from £12.00</div>
+      <div class="rf">£10.00</div><div class="rk">100%</div>
+    </div>
+    <div class="rrow">
+      <div><div class="rt">Soho → Camden Town</div><div class="rs">2.9 km · ride #3</div></div>
+      <div class="rs">Bid down from £8.00</div>
+      <div class="rf">£7.00</div><div class="rk">100%</div>
+    </div>
+    <div class="rrow">
+      <div><div class="rt">Soho → Covent Garden</div><div class="rs">0.7 km · ride #5</div></div>
+      <div class="rs">Speed mode, escrowed up front</div>
+      <div class="rf">£0.80</div><div class="rk">100%</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+/* ============================================================
+   CurbsidePalette — design tokens
+   The only colors and typefaces permitted in this system.
+   ============================================================ */
+:root {
+  --bg:      #FFFDF5;   /* Paper — page ground, warm off-white */
+  --fg:      #16150F;   /* Ink — text, borders, primary fills */
+  --accent:  #FFD400;   /* Taxi yellow — a SURFACE color, not an accent dot */
+  --muted:   #E2E0D2;   /* Stone — dividers, disabled */
+  --signal:  #0F2CB8;   /* Deep blue — driver payout, links */
+  --body:    #57543F;   /* Olive-ink — body copy */
+
+  --display: "Manrope", sans-serif;        /* 700/800, -0.03em: headlines, fares */
+  --ui:      "Public Sans", sans-serif;    /* 400/600: labels, buttons, body 14/1.65 */
+  --mark:    "Bricolage Grotesque", sans-serif; /* 700/800: wordmark only */
+
+  /* 8px grid */
+  --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s6: 48px; --s8: 64px;
+
+  --border: 2px solid var(--fg);  /* every edge: 2px ink */
+  --r: 2px;                        /* hard corners, flat, no shadows */
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--ui); font-size: 14px; line-height: 1.65;
+  color: var(--body); background: var(--bg);
+  -webkit-font-smoothing: antialiased; padding: var(--s3);
+}
+h1, h2, h3, .fig { font-family: var(--display); font-weight: 700; letter-spacing: -0.03em; color: var(--fg); line-height: 1.02; }
+a { color: var(--signal); text-decoration: none; font-weight: 600; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; }
+::selection { background: var(--accent); color: var(--fg); }
+.meta { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+.tnum { font-variant-numeric: tabular-nums; }
