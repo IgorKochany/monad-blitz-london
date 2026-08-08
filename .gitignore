@@ -1,0 +1,11 @@
+# Foundry build output
+out/
+cache/
+broadcast/
+
+# Node
+node_modules/
+
+# Logs / OS
+*.log
+.DS_Store

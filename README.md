@@ -38,10 +38,19 @@ Funds sit in contract escrow until the rider confirms completion, then release s
 - `index.html` — the entire dApp in one file: ethers.js v6 (CDN), Leaflet/OpenStreetMap for pickup/drop-off pins and journey view, GBP↔MON pricing (live CoinGecko rate with graceful fallback), in-browser instant wallets, RPC failover across three public Monad endpoints.
 - No backend, no indexer, no database. The chain is the backend.
 
-## Contract (Monad Testnet)
+## Live
 
-- Address: `SEE SUBMISSION / ?c= PARAM`
-- Explorer: https://testnet.monadvision.com
+- **App:** https://fairride-production-9b12.up.railway.app  (add `?present=1` for the QR/stats presentation screen)
+- **Contract (Monad Testnet, chain 10143):** [`0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d`](https://testnet.monadvision.com/address/0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d)
+
+## Smart contract dev (Foundry)
+
+```bash
+forge build      # compile RideMarket.sol
+forge test        # 3 tests: review flow, auto-accept + refund, expiry revert
+```
+
+Deployed with `forge create src/RideMarket.sol:RideMarket --rpc-url https://testnet-rpc.monad.xyz --private-key <key> --broadcast`.
 
 ## Team
 

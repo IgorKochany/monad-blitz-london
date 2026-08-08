@@ -1,0 +1,13 @@
+lib/
+out/
+cache/
+broadcast/
+src/
+test/
+script/
+foundry.toml
+.git/
+node_modules/
+screenshots/
+fairride-site.zip
+*.log
