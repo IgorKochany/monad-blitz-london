@@ -317,11 +317,7 @@ const ABI = [
   "event Completed(uint256 indexed rideId, address indexed driver, uint256 price)",
   "event Cancelled(uint256 indexed rideId)"
 ];
-// Delta polling: most ticks cost one eth_getLogs call instead of refetching every
-// ride + every bid every time. Full resync runs occasionally as a safety net.
 const POLL_MS = 2000;
-const FULL_RESYNC_MS = 30000;
-const MAX_LOG_RANGE = 5000; // defensive cap; Monad's 300ms blocks make this generous
 const PRESENT = new URLSearchParams(location.search).get("present") === "1";
 
 // ---- GBP pricing: users think in £, the chain settles in MON ----
@@ -346,7 +342,6 @@ let readProvider = new ethers.JsonRpcProvider(RPC_URLS[rpcIndex]);
 let readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
 let signer = null, myAddr = null, writeContract = null, mmConnected = false;
 let ridesCache = [];
-let lastBlock = null; // last block we've processed events through; null = need a full resync
 let pickMap = null, pickA = null, pickB = null, pickMarkers = [];
 let modalMapObj = null;
 
@@ -569,9 +564,6 @@ function closeMap() { $("mapModal").style.display = "none"; if (modalMapObj) { m
 $("mapModal").addEventListener("click", (e) => { if (e.target.id === "mapModal") closeMap(); });
 
 // ================= READ LOOP =================
-// Real-time without refetching the world: each tick asks the chain "any new
-// events since the last block I saw?" (one eth_getLogs call). Only rides that
-// actually changed get refetched. A periodic full resync heals any drift.
 async function fetchRide(i) {
   const r = await readContract.rides(i);
   const bc = Number(await readContract.bidCount(i));
@@ -586,60 +578,39 @@ function upsertRides(updated) {
   updated.forEach(r => byId.set(r.id, r));
   ridesCache = [...byId.values()].sort((a, b) => b.id - a.id); // newest first
 }
-async function fullResync() {
-  const blockNow = await readProvider.getBlockNumber();
-  const n = Number(await readContract.rideCount());
-  const ids = Array.from({ length: n }, (_, i) => i);
-  const rides = await Promise.all(ids.map(fetchRide));
-  ridesCache = rides.reverse();
-  lastBlock = blockNow;
-  $("liveLabel").textContent = "live · " + n + " trips";
-  render();
-}
-let lastFullSync = 0;
 let refreshBusy = false;
 let failStreak = 0, nextTryAt = 0;
+// Every tick: one rideCount call, then refetch only rides that can still change
+// (new ones, open ones, matched-awaiting-completion). Completed/cancelled rides
+// are final on-chain and never refetched. ethers batches the concurrent calls,
+// so a tick is ~2 HTTP requests — cheap enough for every visitor, every 2s,
+// and it uses only plain eth_call (getLogs is gated on public endpoints).
 async function refresh() {
   if (refreshBusy) return; // never stack ticks on a slow RPC
   if (Date.now() < nextTryAt) return; // backing off after failures — don't hammer a limited RPC
   refreshBusy = true;
   try {
-    if (lastBlock === null || Date.now() - lastFullSync > FULL_RESYNC_MS) {
-      await fullResync();
-      lastFullSync = Date.now();
-      return;
+    const n = Number(await readContract.rideCount());
+    const known = new Map(ridesCache.map(r => [r.id, r]));
+    const toFetch = [];
+    let sawNew = false;
+    for (let i = 0; i < n; i++) {
+      const k = known.get(i);
+      if (!k) { toFetch.push(i); sawNew = true; }           // brand-new ride
+      else if (k.status === 0 || k.status === 1) toFetch.push(i); // can still change
     }
-    const blockNow = await readProvider.getBlockNumber();
-    if (blockNow <= lastBlock) return; // no new blocks, nothing can have changed
-    const from = Math.max(lastBlock + 1, blockNow - MAX_LOG_RANGE);
-    const logs = await readProvider.getLogs({ address: CONTRACT_ADDRESS, fromBlock: from, toBlock: blockNow });
-    lastBlock = blockNow;
-    if (!logs.length) return;
-    // Decode which rides the new events touched, refetch just those.
-    const touched = new Set();
-    let sawNewRide = false;
-    for (const lg of logs) {
-      try {
-        const p = readContract.interface.parseLog(lg);
-        if (!p) continue;
-        touched.add(Number(p.args.rideId));
-        if (p.name === "RidePosted") sawNewRide = true;
-      } catch (e) { /* unknown log, skip */ }
+    if (toFetch.length) {
+      const updated = await Promise.all(toFetch.map(fetchRide));
+      upsertRides(updated);
     }
-    if (!touched.size) return;
-    const updated = await Promise.all([...touched].map(fetchRide));
-    upsertRides(updated);
-    $("liveLabel").textContent = "live · " + ridesCache.length + " trips";
-    if (sawNewRide && role === "driver") toast("New job just posted");
+    $("liveLabel").textContent = "live · " + n + " trips";
+    if (sawNew && ridesCache.length && role === "driver" && known.size > 0) toast("New job just posted");
     render();
     failStreak = 0;
   } catch (e) {
-    // Recover silently — the label keeps its last good state instead of flashing
-    // an ugly "reconnecting" at users; the backoff below does the healing.
-    // Keep our delta position (lastBlock) so a transient failure only retries the
-    // cheap delta, and back off exponentially so we never hammer a limited RPC.
+    // Recover silently — the label keeps its last good state; the backoff heals.
     failStreak++;
-    nextTryAt = Date.now() + Math.min(1000 * 2 ** failStreak, 15000);
+    nextTryAt = Date.now() + Math.min(1000 * 2 ** failStreak, 10000);
     rotateRpc();
   } finally {
     refreshBusy = false;
