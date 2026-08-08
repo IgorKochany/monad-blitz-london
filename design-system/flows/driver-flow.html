@@ -1,0 +1,150 @@
+<!-- @dsCard group="App flows" name="Driver flow" subtitle="Go online → job request → fare won → drive → paid on drop-off" width="1720" height="660" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Driver flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<link rel="stylesheet" href="_phone.css">
+</head>
+<body>
+<div class="flow">
+
+  <!-- D1 · GO ONLINE -->
+  <div class="step">
+    <div class="n"><b>1 · Go online</b> — earnings up front, jobs nearby</div>
+    <div class="phone">
+      <div class="status"><span>9:40</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Driver</span></div>
+      <div class="scr">
+        <div class="pad" style="border-bottom:var(--border); background:var(--accent)">
+          <div class="lab" style="margin-top:0; color:var(--fg)">Earned today · all yours, 0% taken</div>
+          <div class="fare-lg" style="font-size:36px">£68.40</div>
+        </div>
+        <div class="pad">
+          <div class="seg"><div class="on">Online</div><div>Offline</div></div>
+          <div class="lab">Nearby</div>
+          <div class="krow"><span>Open jobs within 3 km</span><b>3</b></div>
+          <div class="krow"><span>Rides completed today</span><b>7</b></div>
+          <div class="krow"><span>Paid out</span><b>on every drop-off</b></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="bigbtn">See available jobs</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D2 · JOB REQUEST -->
+  <div class="step">
+    <div class="n"><b>2 · Job request</b> — fare first, one tap to take it</div>
+    <div class="phone">
+      <div class="status"><span>9:42</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Closes in 4m 12s</span></div>
+      <div class="scr">
+        <div class="pad" style="border-bottom:var(--border); background:var(--accent); display:flex; justify-content:space-between; align-items:flex-end">
+          <div>
+            <div class="lab" style="margin-top:0; color:var(--fg)">Instant fare</div>
+            <div class="fare-lg" style="font-size:36px">£12.00</div>
+          </div>
+          <div style="font-size:11px; font-weight:600; color:var(--fg); text-align:right">6.00 MON<br>escrowed</div>
+        </div>
+        <div class="pad">
+          <div class="field o"><span class="ic"></span>London Bridge</div>
+          <div class="field d"><span class="ic"></span>Stratford</div>
+          <div class="lab">&nbsp;</div>
+          <div class="chiprow"><span class="chip">7.0 km</span><span class="chip">~17 min</span><span class="chip hot">Instant match</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot">
+          <div class="bigbtn">Accept this fare · £12.00</div>
+          <div class="lab" style="text-align:center">or bid lower to beat other drivers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D3 · FARE WON -->
+  <div class="step">
+    <div class="n"><b>3 · Fare won</b> — matched on-chain, head to pickup</div>
+    <div class="phone">
+      <div class="status"><span>9:43</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Matched</span></div>
+      <div class="scr">
+        <div class="pad">
+          <div class="note">You won this fare. £12.00 is escrowed and releases on drop-off.</div>
+          <div class="lab">&nbsp;</div>
+          <div class="bidrow win"><span>your bid</span><span class="amt">£12.00</span></div>
+          <div class="lab">Pickup</div>
+          <div class="field o"><span class="ic"></span>London Bridge · rider 0x89a4</div>
+        </div>
+        <div class="map" style="border-top:var(--border); border-bottom:0">
+          <svg viewBox="0 0 300 120" aria-hidden="true">
+            <path d="M46 30 C 120 55, 180 70, 258 92" fill="none" stroke="#16150F" stroke-width="4"/>
+            <rect x="38" y="22" width="16" height="16" fill="#FFD400" stroke="#16150F" stroke-width="3"/>
+            <circle cx="258" cy="92" r="7" fill="#FFFDF5" stroke="#16150F" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="bigbtn blue">Navigate to pickup · 4 min</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D4 · IN RIDE -->
+  <div class="step">
+    <div class="n"><b>4 · Drive</b> — fare locked, no adjustments after</div>
+    <div class="phone">
+      <div class="status"><span>9:51</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">To Stratford</span></div>
+      <div class="scr">
+        <div class="map">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <path d="M30 118 C 110 96, 170 70, 270 34" fill="none" stroke="#0F2CB8" stroke-width="4"/>
+            <path d="M30 118 C 90 102, 130 88, 168 72" fill="none" stroke="#16150F" stroke-width="4"/>
+            <circle cx="30" cy="118" r="7" fill="#FFFDF5" stroke="#16150F" stroke-width="3"/>
+            <rect x="160" y="64" width="16" height="16" fill="#FFD400" stroke="#16150F" stroke-width="3"/>
+            <rect x="263" y="27" width="14" height="14" fill="#16150F"/>
+          </svg>
+        </div>
+        <div class="pad">
+          <div class="krow"><span>Drop-off</span><b>Stratford</b></div>
+          <div class="krow"><span>Remaining</span><b>~8 min</b></div>
+          <div class="krow"><span>Fare</span><b>£12.00 · locked in escrow</b></div>
+          <div class="lab">&nbsp;</div>
+          <div class="note">No commission comes out of this. The number you see is the number you keep.</div>
+        </div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D5 · PAID -->
+  <div class="step">
+    <div class="n"><b>5 · Paid on drop-off</b> — escrow releases the same minute</div>
+    <div class="phone">
+      <div class="status"><span>10:07</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Completed</span></div>
+      <div class="scr">
+        <div class="pad" style="border-bottom:var(--border); background:var(--accent)">
+          <div class="lab" style="margin-top:0; color:var(--fg)">Escrow released to your wallet</div>
+          <div class="fare-lg" style="font-size:36px">+£12.00</div>
+        </div>
+        <div class="pad">
+          <div class="krow"><span>Fare</span><b>£12.00</b></div>
+          <div class="krow"><span>Commission</span><b>£0.00</b></div>
+          <div class="krow"><span>You keep</span><b>100%</b></div>
+          <div class="krow"><span>Earned today</span><b>£80.40</b></div>
+          <div class="lab">&nbsp;</div>
+          <div class="note blue">Paid in 0.6s on Monad — not next Tuesday.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="bigbtn">Back to available jobs</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

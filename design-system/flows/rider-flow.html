@@ -1,0 +1,156 @@
+<!-- @dsCard group="App flows" name="Rider flow" subtitle="Set ride → bids fall → matched → in ride → pay & receipt" width="1720" height="660" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurbsidePalette · Rider flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../_tokens.css">
+<link rel="stylesheet" href="_phone.css">
+</head>
+<body>
+<div class="flow">
+
+  <!-- R1 · SET THE RIDE -->
+  <div class="step">
+    <div class="n"><b>1 · Set the ride</b> — destination + your ceiling, one screen</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Rider</span></div>
+      <div class="scr">
+        <div class="map">
+          <svg viewBox="0 0 300 120" aria-hidden="true">
+            <path d="M40 95 C 110 70, 180 60, 262 28" fill="none" stroke="#0F2CB8" stroke-width="3" stroke-dasharray="6 5"/>
+            <circle cx="40" cy="95" r="7" fill="#FFFDF5" stroke="#16150F" stroke-width="3"/>
+            <rect x="255" y="21" width="14" height="14" fill="#16150F"/>
+          </svg>
+        </div>
+        <div class="pad">
+          <div class="field o"><span class="ic"></span>Shoreditch</div>
+          <div class="field d"><span class="ic"></span>Canary Wharf</div>
+          <div class="lab">The most you'll pay</div>
+          <div class="field" style="justify-content:space-between"><span class="fare-lg" style="font-size:24px">£14.00</span><span style="font-size:11px;color:var(--body)">7.0 MON</span></div>
+          <div class="lab">Match mode</div>
+          <div class="seg"><div class="on">Speed · instant</div><div>Save · review bids</div></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="bigbtn">Post ride · escrow £14.00</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R2 · BIDS FALL -->
+  <div class="step">
+    <div class="n"><b>2 · Watch the price fall</b> — drivers undercut in real time</div>
+    <div class="phone">
+      <div class="status"><span>9:42</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">3 drivers bidding</span></div>
+      <div class="scr">
+        <div class="pad" style="border-bottom:var(--border); background:var(--accent)">
+          <div class="lab" style="margin-top:0; color:var(--fg)">Your ceiling · closes in 12m 40s</div>
+          <div class="fare-lg" style="font-size:36px">£14.00</div>
+        </div>
+        <div class="pad">
+          <div class="bidrow"><span>driver 0x9f</span><span class="amt">£13.20</span></div>
+          <div class="bidrow"><span>driver 0x3a</span><span class="amt">£12.50</span></div>
+          <div class="bidrow"><span>driver 0x71</span><span class="amt">£11.75</span></div>
+          <div class="lab">Every bid is on-chain. First bid at or under £14.00 wins instantly.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="ghostbtn">Cancel & refund escrow</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R3 · MATCHED -->
+  <div class="step">
+    <div class="n"><b>3 · Matched</b> — driver assigned, refund already back</div>
+    <div class="phone">
+      <div class="status"><span>9:43</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Matched</span></div>
+      <div class="scr">
+        <div class="map">
+          <svg viewBox="0 0 300 96" aria-hidden="true">
+            <path d="M262 78 C 210 66, 160 58, 96 30" fill="none" stroke="#0F2CB8" stroke-width="3"/>
+            <circle cx="262" cy="78" r="7" fill="#FFFDF5" stroke="#16150F" stroke-width="3"/>
+            <rect x="88" y="22" width="14" height="14" fill="#FFD400" stroke="#16150F" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="pad">
+          <div style="display:flex; gap:10px; align-items:center; border:var(--border); padding:10px 12px">
+            <div class="avatar">FB</div>
+            <div style="min-width:0">
+              <div style="font-size:14px; font-weight:700; color:var(--fg)">driver 0xfb</div>
+              <div style="font-size:11.5px; color:var(--body)">Toyota Prius · arriving in 4 min</div>
+            </div>
+            <div class="spacer"></div>
+            <div class="fare-lg" style="font-size:20px">£11.10</div>
+          </div>
+          <div class="lab">&nbsp;</div>
+          <div class="note blue">£2.90 of your ceiling was refunded the moment the bid won.</div>
+          <div class="lab">&nbsp;</div>
+          <div class="krow"><span>Fare in escrow</span><b>£11.10 · 5.55 MON</b></div>
+          <div class="krow"><span>Held by</span><b>the contract, nobody else</b></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="ghostbtn">Show pickup pin</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R4 · IN RIDE -->
+  <div class="step">
+    <div class="n"><b>4 · In the ride</b> — progress to drop-off</div>
+    <div class="phone">
+      <div class="status"><span>9:58</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">On the way</span></div>
+      <div class="scr">
+        <div class="map">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <path d="M30 120 C 100 100, 150 80, 268 34" fill="none" stroke="#0F2CB8" stroke-width="4"/>
+            <path d="M30 120 C 80 106, 120 94, 152 78" fill="none" stroke="#16150F" stroke-width="4"/>
+            <circle cx="30" cy="120" r="7" fill="#FFFDF5" stroke="#16150F" stroke-width="3"/>
+            <rect x="144" y="70" width="16" height="16" fill="#FFD400" stroke="#16150F" stroke-width="3"/>
+            <rect x="261" y="27" width="14" height="14" fill="#16150F"/>
+          </svg>
+        </div>
+        <div class="pad">
+          <div class="krow"><span>Drop-off</span><b>Canary Wharf</b></div>
+          <div class="krow"><span>Arriving</span><b>~9 min</b></div>
+          <div class="krow"><span>Fare</span><b>£11.10 · locked</b></div>
+          <div class="lab">&nbsp;</div>
+          <div class="note">The price can't change mid-ride. No surge, no adjustment — it's escrowed.</div>
+        </div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R5 · PAY & RECEIPT -->
+  <div class="step">
+    <div class="n"><b>5 · Confirm & pay</b> — one tap releases escrow, receipt is on-chain</div>
+    <div class="phone">
+      <div class="status"><span>10:07</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+      <div class="appbar"><span class="wm">Fair<span>Ride</span></span><span class="st">Arrived</span></div>
+      <div class="scr">
+        <div class="pad">
+          <div class="bigbtn">Confirm drop-off & pay driver</div>
+          <div class="lab">Receipt</div>
+          <div class="krow"><span>Your ceiling</span><b>£14.00</b></div>
+          <div class="krow"><span>Winning bid</span><b>£11.10</b></div>
+          <div class="krow"><span>Refunded to you</span><b style="color:var(--signal)">+£2.90</b></div>
+          <div class="krow"><span>Platform commission</span><b>£0.00</b></div>
+          <div class="krow"><span>Driver keeps</span><b>100%</b></div>
+          <div class="lab">&nbsp;</div>
+          <div class="note">Settled on Monad in 0.6s. Tap to open the transaction in the explorer.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="foot"><div class="ghostbtn">Post another ride</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
