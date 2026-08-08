@@ -3,316 +3,545 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FairRide — you name the fare, drivers bid it down</title>
+<title>FairRide — the meter runs down, not up</title>
+<meta name="description" content="Riders set the most they'll pay. Drivers bid under it. The lowest bid wins and keeps 100% of the fare. Settled on Monad in under a second.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink: #171A21; --paper: #EDF0F3; --card: #FFFFFF;
-    --ceiling: #7A5AF8; --bid: #0F8A5F; --signal: #1F5AFF; --fade: #6B7280;
-    --line: #D7DCE3; --wash: #E4E8ED;
-    --serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ink: #EAECEF; --paper: #14161B; --card: #1B1E25;
-      --ceiling: #9B87FF; --bid: #2BB889; --signal: #5E8BFF; --fade: #8A93A0;
-      --line: #2A2E37; --wash: #21252D;
-    }
-  }
-  :root[data-theme="light"] {
-    --ink: #171A21; --paper: #EDF0F3; --card: #FFFFFF;
-    --ceiling: #7A5AF8; --bid: #0F8A5F; --signal: #1F5AFF; --fade: #6B7280;
-    --line: #D7DCE3; --wash: #E4E8ED;
-  }
-  :root[data-theme="dark"] {
-    --ink: #EAECEF; --paper: #14161B; --card: #1B1E25;
-    --ceiling: #9B87FF; --bid: #2BB889; --signal: #5E8BFF; --fade: #8A93A0;
-    --line: #2A2E37; --wash: #21252D;
-  }
+/* ============================================================
+   CurbsidePalette — the only colors and faces in this document
+   ============================================================ */
+:root {
+  --bg:      #FFFDF5;   /* Paper  — page ground, warm off-white */
+  --fg:      #16150F;   /* Ink    — text, borders, primary fills */
+  --accent:  #FFD400;   /* Taxi   — a SURFACE color: fare cards get painted in it */
+  --muted:   #E2E0D2;   /* Stone  — dividers, disabled */
+  --signal:  #0F2CB8;   /* Deep blue — driver payout, links */
+  --body:    #57543F;   /* Olive-ink — body copy */
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    background: var(--paper); color: var(--ink);
-    font-family: var(--sans); line-height: 1.5;
-    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-    min-height: 100vh;
-  }
-  a { color: var(--signal); text-decoration: none; }
-  a:hover { text-decoration: underline; text-underline-offset: 3px; }
-  :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 2px; }
+  --display: "Manrope", sans-serif;
+  --ui:      "Public Sans", sans-serif;
+  --mark:    "Bricolage Grotesque", sans-serif;
 
-  .shell { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+  /* 8px grid */
+  --s1: 8px;  --s2: 16px; --s3: 24px; --s4: 32px;
+  --s6: 48px; --s8: 64px; --s12: 96px; --s16: 128px;
 
-  /* ---------- top bar ---------- */
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
-  .mark { font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
-  .mark b { color: var(--signal); font-weight: 700; }
-  .status { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--fade); }
-  .status .live { display: inline-flex; align-items: center; gap: 7px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bid); }
-  @media (prefers-reduced-motion: no-preference) { .dot { animation: blink 1.8s ease-in-out infinite; } }
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-  .toggle { font-family: var(--mono); font-size: 12px; color: var(--fade); background: transparent; border: 1px solid var(--line); padding: 5px 10px; border-radius: 999px; cursor: pointer; }
-  .toggle:hover { color: var(--ink); border-color: var(--fade); }
+  --border: 2px solid var(--fg);
+  --r: 2px;
+}
 
-  /* ---------- hero ---------- */
-  .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; padding: 40px 0 68px; }
-  .eyebrow { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fade); margin-bottom: 22px; }
-  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(40px, 6.4vw, 70px); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance; }
-  h1 em { font-style: italic; color: var(--signal); }
-  .lead { font-size: clamp(17px, 2.1vw, 19.5px); line-height: 1.55; color: var(--ink); max-width: 30em; margin: 26px 0 30px; }
-  .lead b { font-weight: 600; }
-  .facts { display: flex; gap: 40px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 30px; }
-  .fact { display: flex; flex-direction: column; gap: 4px; }
-  .fig { font-family: var(--mono); font-size: 30px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-  .fact .lbl { font-size: 13px; color: var(--fade); max-width: 16em; }
-  .cta-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-  .btn { display: inline-block; background: var(--signal); color: #fff; font-weight: 600; font-size: 15px; padding: 13px 22px; border-radius: 10px; border: 0; cursor: pointer; }
-  .btn:hover { background: color-mix(in srgb, var(--signal) 84%, #000); text-decoration: none; }
-  .ghostlink { font-family: var(--mono); font-size: 13px; color: var(--fade); }
-  .ghostlink:hover { color: var(--signal); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-  /* ---------- signature: descending-fare ladder ---------- */
-  .ladder { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 20px; box-shadow: 0 1px 0 var(--line); }
-  .ladder-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
-  .ladder-head .m { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fade); }
-  .ladder-head .mode { color: var(--ceiling); }
-  .rungs { display: flex; flex-direction: column; gap: 9px; }
-  .rung { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
-  .rung .bar { position: relative; height: 40px; border-radius: 8px; background: var(--wash); overflow: hidden; }
-  .rung .fill { position: absolute; inset: 0 auto 0 0; height: 100%; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; }
-  .rung .who { font-family: var(--mono); font-size: 12.5px; color: #fff; white-space: nowrap; }
-  .rung .amt { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-  .rung .amt .mon { display: block; font-size: 11px; color: var(--fade); }
+body {
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--body);
+  background-color: var(--bg);
+  /* Layered: yellow wash overhead, stone haze, then a ruled 64px grid.
+     No solid fill anywhere. */
+  background-image:
+    radial-gradient(ellipse 90% 46% at 50% -8%, rgba(255, 212, 0, .30), transparent 62%),
+    radial-gradient(ellipse 60% 40% at 100% 12%, rgba(226, 224, 210, .40), transparent 70%),
+    repeating-linear-gradient(0deg,  transparent 0 63px, rgba(22, 21, 15, .045) 63px 64px),
+    repeating-linear-gradient(90deg, transparent 0 63px, rgba(22, 21, 15, .045) 63px 64px);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
 
-  .rung.ceiling .bar { background: transparent; border: 1.5px dashed var(--ceiling); }
-  .rung.ceiling .fill { background: transparent; }
-  .rung.ceiling .who { color: var(--ceiling); }
-  .rung.ceiling .amt { color: var(--ceiling); }
-  .rung .fill { background: var(--bid); }
-  .rung.win .fill { background: var(--signal); }
-  .rung.win .amt { color: var(--signal); font-weight: 600; }
-  .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; background: rgba(255,255,255,0.22); color: #fff; padding: 2px 6px; border-radius: 5px; margin-left: 10px; }
+h1, h2, h3, .fig { font-family: var(--display); font-weight: 700; letter-spacing: -0.03em; color: var(--fg); line-height: 1.02; }
+p { max-width: 62ch; }
+a { color: var(--signal); text-decoration: none; font-weight: 600; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; }
+::selection { background: var(--accent); color: var(--fg); }
 
-  .refund { margin-top: 16px; padding: 13px 15px; border-radius: 10px; background: color-mix(in srgb, var(--signal) 12%, transparent); border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .refund .t { font-size: 13.5px; color: var(--ink); }
-  .refund .v { font-family: var(--mono); font-weight: 600; color: var(--signal); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .ladder figcaption { margin-top: 14px; font-size: 12px; color: var(--fade); line-height: 1.45; }
+.shell { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 var(--s3); }
+.meta { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+.tnum { font-variant-numeric: tabular-nums; }
 
-  /* load orchestration (motion only when allowed) */
-  .rung, .refund { opacity: 1; }
-  @media (prefers-reduced-motion: no-preference) {
-    .rung { opacity: 0; transform: translateY(10px); animation: rise .55s cubic-bezier(.2,.7,.2,1) forwards; }
-    .rung.r0 { animation-delay: .15s; } .rung.r1 { animation-delay: .5s; }
-    .rung.r2 { animation-delay: .75s; } .rung.r3 { animation-delay: 1s; } .rung.r4 { animation-delay: 1.25s; }
-    .rung .fill { transform-origin: left; animation: grow .6s cubic-bezier(.2,.7,.2,1) both; }
-    .rung.r1 .fill { animation-delay: .5s; } .rung.r2 .fill { animation-delay: .75s; }
-    .rung.r3 .fill { animation-delay: 1s; } .rung.r4 .fill { animation-delay: 1.25s; }
-    .refund { opacity: 0; animation: rise .55s ease forwards 1.6s; }
-    @keyframes rise { to { opacity: 1; transform: none; } }
-    @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  }
+/* ---------- curb stripe: the one ornament, used as a rule ---------- */
+.curb {
+  height: 10px;
+  border-top: var(--border); border-bottom: var(--border);
+  background-image: repeating-linear-gradient(135deg, var(--accent) 0 12px, var(--bg) 12px 24px);
+}
 
-  /* ---------- money flow ---------- */
-  .band { border-top: 1px solid var(--line); padding: 64px 0; }
-  .band > .k { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fade); margin-bottom: 10px; }
-  .band > h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(26px, 3.6vw, 38px); letter-spacing: -0.01em; line-height: 1.08; text-wrap: balance; margin-bottom: 34px; max-width: 16em; }
+/* ============================ NAV ============================ */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s3) 0; flex-wrap: wrap; }
+.wordmark { font-family: var(--mark); font-weight: 800; font-size: 25px; letter-spacing: -0.02em; color: var(--fg); }
+.wordmark span { background: var(--accent); border: var(--border); padding: 0 6px; margin-left: 1px; }
+.navlinks { display: flex; align-items: center; gap: var(--s3); }
+.navlinks a { color: var(--fg); font-size: 14px; }
+.navlinks a:hover { color: var(--signal); }
 
-  .pipe { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; }
-  .node { background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 20px; }
-  .node .role { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fade); margin-bottom: 9px; }
-  .node .big { font-family: var(--serif); font-size: 21px; margin-bottom: 7px; }
-  .node p { font-size: 13.5px; color: var(--fade); line-height: 1.5; }
-  .node.escrow { border-color: color-mix(in srgb, var(--signal) 45%, var(--line)); }
-  .node.escrow .big { color: var(--signal); }
-  .conn { display: flex; align-items: center; justify-content: center; width: 46px; color: var(--fade); font-family: var(--mono); font-size: 18px; }
-  .fee { margin-top: 18px; display: flex; align-items: center; gap: 14px; font-size: 13.5px; color: var(--fade); }
-  .fee .slot { font-family: var(--mono); font-size: 13px; color: var(--ink); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 14px; }
-  .fee .slot b { color: var(--bid); }
+/* ============================ BUTTONS ============================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s1);
+  font-family: var(--ui); font-size: 15px; font-weight: 700; line-height: 1;
+  padding: 17px 26px; border-radius: var(--r); border: var(--border);
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: transform .12s ease, background-color .12s ease, color .12s ease;
+}
+.btn-primary { background: var(--fg); color: var(--accent); }
+.btn-primary:hover { background: var(--signal); color: #fff; text-decoration: none; transform: translateY(-2px); }
+.btn-secondary { background: var(--bg); color: var(--fg); }
+.btn-secondary:hover { background: var(--accent); text-decoration: none; transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
 
-  /* ---------- two modes ---------- */
-  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-  .mode-col { padding: 30px 30px 34px; }
-  .mode-col + .mode-col { border-left: 1px solid var(--line); }
-  .mode-col .tagm { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fade); }
-  .mode-col h3 { font-family: var(--serif); font-weight: 400; font-size: 27px; margin: 8px 0 12px; }
-  .mode-col.speed h3 { color: var(--ceiling); }
-  .mode-col.save h3 { color: var(--bid); }
-  .mode-col p { font-size: 14.5px; color: var(--ink); line-height: 1.55; max-width: 30em; }
-  .mode-col .how { margin-top: 16px; font-family: var(--mono); font-size: 12.5px; color: var(--fade); line-height: 1.7; }
+/* ============================ HERO ============================ */
+.hero { display: grid; grid-template-columns: 1.02fr .98fr; gap: var(--s8); align-items: center; padding: var(--s8) 0 var(--s12); }
+.kicker { display: inline-block; background: var(--accent); border: var(--border); padding: 6px 12px; margin-bottom: var(--s3); }
+h1 { font-size: clamp(46px, 7.4vw, 92px); font-weight: 800; text-wrap: balance; }
+/* Highlight painted as a background so the span stays inline —
+   an inline-block here lets the following comma wrap to its own line. */
+h1 .down {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 100% .17em;
+  background-position: 0 86%;
+  background-repeat: no-repeat;
+}
+.sub { font-size: 17px; line-height: 1.6; margin: var(--s3) 0 var(--s4); max-width: 46ch; }
+.sub strong { color: var(--fg); font-weight: 700; }
+.cta { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.trust { display: flex; gap: var(--s3); margin-top: var(--s4); padding-top: var(--s3); border-top: 2px solid var(--muted); flex-wrap: wrap; }
+.trust div { font-size: 13px; }
+.trust b { display: block; font-family: var(--display); font-size: 22px; color: var(--fg); letter-spacing: -0.03em; }
 
-  /* ---------- closer ---------- */
-  .closer { text-align: left; padding: 70px 0 40px; }
-  .closer h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 4.4vw, 46px); line-height: 1.05; letter-spacing: -0.015em; text-wrap: balance; max-width: 14em; }
-  .closer .sub { color: var(--fade); font-size: 16px; margin: 16px 0 26px; max-width: 34em; }
-  .addr { font-family: var(--mono); font-size: 12.5px; color: var(--fade); margin-top: 24px; word-break: break-all; }
-  .addr a { color: var(--fade); }
-  .addr a:hover { color: var(--signal); }
+/* ---------- hero fare card: yellow as surface ---------- */
+.meter { background: var(--accent); border: var(--border); }
+.meter-hd { display: flex; justify-content: space-between; align-items: baseline; padding: var(--s2) var(--s3); border-bottom: var(--border); }
+.meter-hd .rt { font-size: 12px; font-weight: 600; color: var(--fg); }
+.ceiling { padding: var(--s3); border-bottom: var(--border); display: flex; justify-content: space-between; align-items: flex-end; }
+.ceiling .fig { font-size: 54px; font-weight: 800; }
+.ceiling .cap { font-size: 12px; font-weight: 600; color: var(--fg); text-align: right; line-height: 1.4; }
+.ladder { padding: var(--s2) var(--s3) var(--s3); display: flex; flex-direction: column; gap: 6px; }
+.bid { display: flex; align-items: center; gap: var(--s2); background: var(--bg); border: var(--border); padding: 11px 14px; }
+.bid .who { font-size: 12px; font-weight: 600; color: var(--body); }
+.bid .amt { margin-left: auto; font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--fg); }
+.bid.win { background: var(--fg); }
+.bid.win .who { color: var(--accent); font-weight: 700; }
+.bid.win .amt { color: var(--accent); }
+.bid.win .flag { font-size: 10px; font-weight: 700; letter-spacing: .1em; background: var(--accent); color: var(--fg); padding: 3px 6px; }
+.refund { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); padding: 13px var(--s3); background: var(--signal); border-top: var(--border); }
+.refund span { color: #fff; font-size: 13px; font-weight: 600; }
+.refund b { font-family: var(--display); color: #fff; font-size: 19px; }
 
-  footer { border-top: 1px solid var(--line); padding: 28px 0 48px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; color: var(--fade); }
+/* ============================ SECTIONS ============================ */
+.band { padding: var(--s12) 0; border-top: 2px solid var(--muted); }
+.band-hd { margin-bottom: var(--s8); }
+.band-hd .meta { color: var(--signal); }
+.band-hd h2 { font-size: clamp(32px, 4.4vw, 52px); margin-top: var(--s2); text-wrap: balance; max-width: 17ch; }
+.band-hd p { margin-top: var(--s3); font-size: 16px; }
 
-  /* ---------- responsive ---------- */
-  @media (max-width: 860px) {
-    .hero { grid-template-columns: 1fr; gap: 34px; padding: 24px 0 52px; }
-    .pipe { grid-template-columns: 1fr; }
-    .conn { width: auto; height: 34px; transform: rotate(90deg); }
-    .modes { grid-template-columns: 1fr; }
-    .mode-col + .mode-col { border-left: 0; border-top: 1px solid var(--line); }
-  }
-  @media (max-width: 520px) {
-    .facts { flex-direction: column; gap: 20px; }
-    .status .live { display: none; }
-  }
+/* how it works: 3 stages, genuinely sequential -> numbering earns its place */
+.stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: var(--border); background: var(--bg); }
+.stage { padding: var(--s4); border-right: var(--border); display: flex; flex-direction: column; }
+.stage:last-child { border-right: 0; }
+.stage .n { font-family: var(--display); font-size: 13px; font-weight: 800; color: var(--fg); background: var(--accent); border: var(--border); width: 34px; height: 34px; display: grid; place-items: center; margin-bottom: var(--s3); }
+.stage h3 { font-size: 21px; margin-bottom: var(--s1); }
+.stage p { font-size: 14px; }
+/* margin-top:auto pins the tick to the card floor so all three align */
+.stage .tick { margin-top: auto; padding-top: var(--s2); border-top: 2px solid var(--muted); font-size: 12px; font-weight: 600; color: var(--signal); }
+.stage p { margin-bottom: var(--s3); }
+
+/* driver split */
+.split { display: grid; grid-template-columns: .92fr 1.08fr; gap: var(--s8); align-items: start; }
+.checks { list-style: none; display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s4); }
+.checks li { display: flex; gap: var(--s2); align-items: flex-start; font-size: 15px; }
+.checks svg { flex: 0 0 auto; width: 22px; height: 22px; margin-top: 1px; }
+
+/* job card — the real driver surface, shown as product proof */
+.jobcard { background: var(--bg); border: var(--border); }
+.jobcard .jhd { display: flex; justify-content: space-between; align-items: center; padding: 11px var(--s3); border-bottom: var(--border); background: var(--accent); }
+.jobcard .jbody { padding: var(--s3); }
+.jrow { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+.stops { display: flex; flex-direction: column; gap: 14px; }
+.stop { display: flex; align-items: center; gap: 11px; position: relative; }
+.stop .dot { width: 12px; height: 12px; border: var(--border); flex: 0 0 auto; background: var(--bg); }
+.stop.a .dot { border-radius: 50%; }   /* pickup reads as a pin, drop-off as a destination */
+.stop.b .dot { background: var(--fg); }
+.stop.a::after { content: ""; position: absolute; left: 5px; top: 16px; width: 2px; height: 14px; background: var(--fg); }
+.stop .nm { font-size: 15px; font-weight: 600; color: var(--fg); }
+.jfare { text-align: right; }
+.jfare .fig { font-size: 34px; font-weight: 800; }
+.jfare .u { font-size: 12px; font-weight: 600; color: var(--body); }
+.jchips { display: flex; gap: var(--s1); flex-wrap: wrap; margin-top: var(--s3); }
+.jchip { font-size: 12px; font-weight: 600; color: var(--fg); border: 2px solid var(--muted); padding: 4px 9px; }
+.jchip.hot { border-color: var(--fg); background: var(--accent); }
+.jaccept { display: block; width: 100%; margin-top: var(--s3); background: var(--fg); color: var(--accent); border: var(--border); padding: 15px; font-family: var(--ui); font-weight: 700; font-size: 15px; cursor: pointer; transition: background .12s ease, color .12s ease; }
+.jaccept:hover { background: var(--signal); color: #fff; }
+
+/* empty state */
+.empty { margin-top: var(--s2); border: 2px dashed var(--muted); background: var(--bg); padding: var(--s4); text-align: center; }
+.empty .fig { font-size: 15px; margin-bottom: 4px; }
+.empty p { font-size: 13px; margin: 0 auto; max-width: 34ch; }
+
+/* receipts (verifiable, not testimonials) */
+.receipts { border: var(--border); background: var(--bg); }
+.rrow { display: grid; grid-template-columns: 1.6fr 1fr .8fr auto; gap: var(--s3); align-items: center; padding: var(--s3); border-bottom: 2px solid var(--muted); }
+.rrow:last-child { border-bottom: 0; }
+.rrow:hover { background: rgba(255, 212, 0, .16); }
+.rrow .rt { font-size: 14px; font-weight: 600; color: var(--fg); }
+.rrow .rs { font-size: 12px; color: var(--body); }
+.rrow .rf { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--fg); text-align: right; }
+.rrow .rk { font-size: 12px; font-weight: 700; color: var(--signal); text-align: right; }
+.rhead { background: var(--muted); }
+.rhead .meta { font-size: 11px; }
+.rhead > * { text-align: left; }
+.rhead .r3, .rhead .r4 { text-align: right; }
+
+/* fare split — honest pricing */
+.pricing { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); align-items: stretch; }
+.plan { border: var(--border); background: var(--bg); display: flex; flex-direction: column; }
+.plan .ph { padding: var(--s3); border-bottom: var(--border); }
+.plan .pb { padding: var(--s4) var(--s3); flex: 1; display: flex; flex-direction: column; gap: var(--s2); }
+.plan .price { font-family: var(--display); font-size: 66px; font-weight: 800; letter-spacing: -0.045em; color: var(--fg); line-height: 1; }
+.plan .price small { display: block; font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--body); margin-top: var(--s1); }
+.plan.them { border-color: var(--muted); }
+.plan.them .ph { border-bottom-color: var(--muted); }
+.plan.them .price { color: var(--body); }
+.plan.us .ph { background: var(--accent); }
+.plan.us .price { color: var(--signal); }
+.lineitem { display: flex; justify-content: space-between; font-size: 14px; padding-bottom: var(--s1); border-bottom: 2px solid var(--muted); }
+.lineitem b { color: var(--fg); }
+
+/* closing */
+.closer { padding: var(--s12) 0; text-align: center; }
+.closer h2 { font-size: clamp(34px, 5.2vw, 62px); margin: 0 auto var(--s3); max-width: 16ch; }
+.closer p { margin: 0 auto var(--s4); font-size: 16px; }
+.closer .cta { justify-content: center; }
+
+footer { border-top: var(--border); padding: var(--s6) 0 var(--s8); }
+.fgrid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: var(--s4); }
+.fgrid h4 { font-family: var(--ui); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); margin-bottom: var(--s2); }
+.fgrid ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.fgrid a { color: var(--body); font-weight: 500; font-size: 14px; }
+.fgrid a:hover { color: var(--signal); }
+.fbase { margin-top: var(--s6); padding-top: var(--s3); border-top: 2px solid var(--muted); display: flex; justify-content: space-between; gap: var(--s2); flex-wrap: wrap; font-size: 12px; }
+.chain { font-size: 12px; color: var(--body); word-break: break-all; }
+
+/* ============================================================
+   One orchestrated page load. CSS only, staggered by delay.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  .r { opacity: 0; transform: translateY(18px); animation: rise .62s cubic-bezier(.2, .7, .2, 1) forwards; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .13s; } .d3 { animation-delay: .21s; }
+  .d4 { animation-delay: .29s; } .d5 { animation-delay: .37s; } .d6 { animation-delay: .45s; }
+  .d7 { animation-delay: .60s; } .d8 { animation-delay: .70s; } .d9 { animation-delay: .80s; }
+  .d10 { animation-delay: .90s; } .d11 { animation-delay: 1.02s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+}
+
+/* ============================ RESPONSIVE ============================ */
+@media (max-width: 940px) {
+  .hero { grid-template-columns: 1fr; gap: var(--s6); padding: var(--s6) 0 var(--s8); }
+  .split { grid-template-columns: 1fr; gap: var(--s6); }
+  .stages { grid-template-columns: 1fr; }
+  .stage { border-right: 0; border-bottom: var(--border); }
+  .stage:last-child { border-bottom: 0; }
+  .pricing { grid-template-columns: 1fr; }
+  .fgrid { grid-template-columns: 1fr 1fr; gap: var(--s4); }
+  .band { padding: var(--s8) 0; }
+}
+@media (max-width: 620px) {
+  .navlinks { display: none; }
+  .rrow { grid-template-columns: 1fr auto; gap: var(--s1) var(--s2); }
+  .rrow .rs { grid-column: 1 / -1; }
+  .rhead { display: none; }
+  .plan .price { font-size: 54px; }
+  .btn { width: 100%; }
+  .fgrid { grid-template-columns: 1fr; }
+  .trust { gap: var(--s2) var(--s3); }
+}
 </style>
 </head>
 <body>
-  <div class="shell">
-    <header class="topbar">
-      <div class="mark">Fair<b>Ride</b></div>
-      <div class="status">
-        <span class="live"><span class="dot"></span>Monad testnet · live</span>
-        <button class="toggle" id="themeBtn" aria-pressed="false">dark</button>
+
+<div class="shell">
+  <nav class="nav r d1">
+    <div class="wordmark">Fair<span>Ride</span></div>
+    <div class="navlinks">
+      <a href="#how">How bidding works</a>
+      <a href="#drive">For drivers</a>
+      <a href="#split">Fare split</a>
+    </div>
+    <a class="btn btn-secondary" href="https://fairride-production-9b12.up.railway.app">Open the app</a>
+  </nav>
+</div>
+
+<div class="curb r d2" role="presentation"></div>
+
+<main>
+  <!-- ============ 1. HERO ============ -->
+  <section class="shell hero">
+    <div>
+      <div class="kicker meta r d3">London · Monad testnet</div>
+      <h1 class="r d4">The meter runs <span class="down">down</span>, not up.</h1>
+      <p class="sub r d5">You post the most you're willing to pay. Drivers bid <strong>under</strong> it, competing for your ride. Lowest bid wins, you get the difference back, and the driver keeps <strong>every penny</strong> of the fare.</p>
+      <div class="cta r d6">
+        <a class="btn btn-primary" href="https://fairride-production-9b12.up.railway.app">Post a ride</a>
+        <a class="btn btn-secondary" href="#drive">Drive and keep 100%</a>
       </div>
-    </header>
+      <div class="trust r d6">
+        <div><b>0%</b>commission taken</div>
+        <div><b>0.6s</b>to settle a match</div>
+        <div><b>£0</b>to sign up</div>
+      </div>
+    </div>
 
-    <main>
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Peer-to-peer rides, priced by you</p>
-          <h1>You name the fare.<br><em>Drivers bid it down.</em></h1>
-          <p class="lead">Post where you're going and the most you'll pay. Drivers nearby compete under your number. The lowest bid wins, and anything you didn't spend comes <b>straight back to your wallet</b>.</p>
-          <div class="facts">
-            <div class="fact"><span class="fig">0%</span><span class="lbl">taken in fees. There is no company in the middle.</span></div>
-            <div class="fact"><span class="fig">~0.6s</span><span class="lbl">for a match to settle on Monad.</span></div>
+    <!-- signature visual: a fare meter that counts down -->
+    <figure class="meter r d7" aria-label="Worked example of a fare being bid down from £14.00 to £11.10">
+      <div class="meter-hd">
+        <span class="meta">Live fare</span>
+        <span class="rt">Shoreditch &rarr; Canary Wharf</span>
+      </div>
+      <div class="ceiling">
+        <div>
+          <div class="meta" style="margin-bottom:6px">Your ceiling</div>
+          <div class="fig tnum">£14.00</div>
+        </div>
+        <div class="cap">7.0 MON<br>escrowed</div>
+      </div>
+      <div class="ladder">
+        <div class="bid r d8"><span class="who">driver 0x9f</span><span class="amt tnum">£13.20</span></div>
+        <div class="bid r d9"><span class="who">driver 0x3a</span><span class="amt tnum">£12.50</span></div>
+        <div class="bid r d10"><span class="who">driver 0x71</span><span class="amt tnum">£11.75</span></div>
+        <div class="bid win r d11"><span class="who">driver 0xfb</span><span class="flag">WINS</span><span class="amt tnum">£11.10</span></div>
+      </div>
+      <figcaption class="refund r d11">
+        <span>Unspent ceiling, straight back to you</span>
+        <b class="tnum">£2.90</b>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ 2. HOW BIDDING WORKS ============ -->
+  <section class="shell band" id="how">
+    <div class="band-hd">
+      <div class="meta">How bidding works</div>
+      <h2>Three steps. No dispatcher deciding your price.</h2>
+      <p>Every ride follows the same path, and all three steps happen on a contract with no owner key and no admin switch.</p>
+    </div>
+    <div class="stages">
+      <div class="stage">
+        <div class="n">1</div>
+        <h3>You set the ceiling</h3>
+        <p>Pick your pickup, your drop-off, and the most you'll pay. Choose Speed and it's escrowed now, or Save and it stays in your wallet until you accept someone.</p>
+        <div class="tick">Takes about 20 seconds</div>
+      </div>
+      <div class="stage">
+        <div class="n">2</div>
+        <h3>Drivers bid under it</h3>
+        <p>Your ride lands in every nearby driver's feed instantly. They undercut each other to win it. You watch the price fall in real time.</p>
+        <div class="tick">First bids arrive in seconds</div>
+      </div>
+      <div class="stage">
+        <div class="n">3</div>
+        <h3>You confirm, they're paid</h3>
+        <p>Escrow releases the moment you confirm drop-off. Whatever you didn't spend under your ceiling returns to your wallet in the same transaction.</p>
+        <div class="tick">Settles in 0.6 seconds</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. FOR DRIVERS ============ -->
+  <section class="shell band" id="drive">
+    <div class="split">
+      <div>
+        <div class="band-hd" style="margin-bottom:0">
+          <div class="meta">For drivers</div>
+          <h2>Name your own price. Keep all of it.</h2>
+          <p>You already know what a job across town is worth. Here you say the number instead of accepting one, and nothing is deducted afterwards.</p>
+        </div>
+        <ul class="checks">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F2CB8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b style="color:var(--fg)">No commission, ever.</b> A £11.10 job pays you £11.10.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F2CB8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b style="color:var(--fg)">Paid the same minute.</b> Escrow releases to your wallet on drop-off, not next Tuesday.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F2CB8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b style="color:var(--fg)">See the fare before you commit.</b> Distance, time and money up front, every time.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F2CB8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b style="color:var(--fg)">No account, no onboarding queue.</b> One tap makes a wallet in your browser.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="jobcard">
+          <div class="jhd">
+            <span class="meta">Available job</span>
+            <span class="meta">closes in 4m 12s</span>
           </div>
-          <div class="cta-row">
-            <a class="btn" href="https://fairride-production-9b12.up.railway.app">Open the app</a>
-            <a class="ghostlink" href="https://testnet.monadvision.com/address/0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d">Read the contract &rarr;</a>
+          <div class="jbody">
+            <div class="jrow">
+              <div class="stops">
+                <div class="stop a"><span class="dot"></span><span class="nm">London Bridge</span></div>
+                <div class="stop b"><span class="dot"></span><span class="nm">Stratford</span></div>
+              </div>
+              <div class="jfare">
+                <div class="fig tnum">£12.00</div>
+                <div class="u tnum">6.00 MON</div>
+              </div>
+            </div>
+            <div class="jchips">
+              <span class="jchip tnum">7.0 km</span>
+              <span class="jchip tnum">~17 min</span>
+              <span class="jchip hot">Instant match</span>
+            </div>
+            <button class="jaccept" type="button">Accept this fare &middot; £12.00</button>
           </div>
         </div>
 
-        <figure class="ladder">
-          <div class="ladder-head">
-            <span class="m mode">Speed mode</span>
-            <span class="m">Shoreditch &rarr; Canary Wharf</span>
-          </div>
-          <div class="rungs">
-            <div class="rung ceiling r0">
-              <div class="bar"><div class="fill" style="width:100%"><span class="who">Your ceiling</span></div></div>
-              <div class="amt">£14.00<span class="mon">7.00 MON</span></div>
-            </div>
-            <div class="rung r1">
-              <div class="bar"><div class="fill" style="width:94%"><span class="who">driver 0x9f… bids</span></div></div>
-              <div class="amt">£13.20<span class="mon">6.60 MON</span></div>
-            </div>
-            <div class="rung r2">
-              <div class="bar"><div class="fill" style="width:89%"><span class="who">driver 0x3a… bids</span></div></div>
-              <div class="amt">£12.50<span class="mon">6.25 MON</span></div>
-            </div>
-            <div class="rung r3">
-              <div class="bar"><div class="fill" style="width:84%"><span class="who">driver 0x71… bids</span></div></div>
-              <div class="amt">£11.75<span class="mon">5.88 MON</span></div>
-            </div>
-            <div class="rung win r4">
-              <div class="bar"><div class="fill" style="width:79%"><span class="who">driver 0xfb… bids<span class="tag">WINS</span></span></div></div>
-              <div class="amt">£11.10<span class="mon">5.55 MON</span></div>
-            </div>
-          </div>
-          <div class="refund">
-            <span class="t">The gap under your ceiling is refunded on the spot.</span>
-            <span class="v">+£2.90 back</span>
-          </div>
-          <figcaption>A worked example. In Speed mode your ceiling is escrowed up front; the first bid at or under it wins instantly and the difference is returned in the same transaction. No haggling, no waiting.</figcaption>
-        </figure>
-      </section>
-
-      <section class="band">
-        <p class="k">Where your money goes</p>
-        <h2>Rider, then escrow, then driver. Nothing skimmed on the way.</h2>
-        <div class="pipe">
-          <div class="node">
-            <div class="role">You</div>
-            <div class="big">Set a ceiling</div>
-            <p>You pick the most you'll pay, in pounds. It's held by the contract, not by us.</p>
-          </div>
-          <div class="conn">&rarr;</div>
-          <div class="node escrow">
-            <div class="role">Escrow</div>
-            <div class="big">The contract holds it</div>
-            <p>Funds sit in on-chain escrow while drivers bid. No owner key can touch them.</p>
-          </div>
-          <div class="conn">&rarr;</div>
-          <div class="node">
-            <div class="role">Driver</div>
-            <div class="big">Paid on arrival</div>
-            <p>You confirm the ride happened and escrow releases to the driver in full.</p>
-          </div>
+        <div class="empty">
+          <div class="fig">Quiet street right now</div>
+          <p>No open jobs within 3 km. New rides appear here the second someone posts one.</p>
         </div>
-        <div class="fee">
-          <span class="slot">platform fee&nbsp;&nbsp;<b>£0.00</b></span>
-          <span>The slot where a company would take its cut is empty by design.</span>
-        </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <section class="band">
-        <p class="k">Two ways to price a ride</p>
-        <h2>Choose speed, or choose to save.</h2>
-        <div class="modes">
-          <div class="mode-col speed">
-            <div class="tagm">When you're in a hurry</div>
-            <h3>Speed</h3>
-            <p>Escrow your ceiling up front. The first driver to bid at or under it is matched instantly, and you're refunded the difference in the same block.</p>
-            <div class="how">escrow ceiling → first bid ≤ ceiling wins → auto-refund the gap</div>
+  <!-- ============ 4. RECEIPTS (verifiable, not testimonials) ============ -->
+  <section class="shell band">
+    <div class="band-hd">
+      <div class="meta">Receipts</div>
+      <h2>Every settlement is public. Go and check.</h2>
+      <p>These are real rides on the live contract. Nothing here is a marketing claim you have to take our word for, each one is a transaction you can open in the explorer yourself.</p>
+    </div>
+    <div class="receipts">
+      <div class="rrow rhead">
+        <span class="meta">Route</span>
+        <span class="meta">Outcome</span>
+        <span class="meta r3">Fare</span>
+        <span class="meta r4">Driver kept</span>
+      </div>
+      <div class="rrow">
+        <div><div class="rt">London Bridge &rarr; Stratford</div><div class="rs">7.0 km &middot; ride #4</div></div>
+        <div class="rs">Bid down from £12.00, driver 0xfb17 leading</div>
+        <div class="rf tnum">£10.00</div>
+        <div class="rk tnum">100%</div>
+      </div>
+      <div class="rrow">
+        <div><div class="rt">Soho &rarr; Camden Town</div><div class="rs">2.9 km &middot; ride #3</div></div>
+        <div class="rs">Bid down from £8.00, driver 0xfb17 leading</div>
+        <div class="rf tnum">£7.00</div>
+        <div class="rk tnum">100%</div>
+      </div>
+      <div class="rrow">
+        <div><div class="rt">Soho &rarr; Covent Garden</div><div class="rs">0.7 km &middot; ride #5</div></div>
+        <div class="rs">Speed mode, fare escrowed up front</div>
+        <div class="rf tnum">£0.80</div>
+        <div class="rk tnum">100%</div>
+      </div>
+    </div>
+    <p class="chain" style="margin-top:var(--s3)">Contract <a href="https://testnet.monadvision.com/address/0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d">0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d</a> &middot; Monad testnet, chain 10143 &middot; no owner, no admin key, no upgrade path</p>
+  </section>
+
+  <!-- ============ 5. FARE SPLIT ============ -->
+  <section class="shell band" id="split">
+    <div class="band-hd">
+      <div class="meta">Fare split</div>
+      <h2>The same £12.00 ride, split two ways.</h2>
+      <p>There is no subscription and no tier to choose. The only number that matters is how much of the fare reaches the person driving the car.</p>
+    </div>
+    <div class="pricing">
+      <div class="plan them">
+        <div class="ph">
+          <div class="meta">A commission app</div>
+        </div>
+        <div class="pb">
+          <div>
+            <div class="price tnum">£9.00</div>
+            <small>reaches the driver, after roughly 25% is taken</small>
           </div>
-          <div class="mode-col save">
-            <div class="tagm">When you want the best price</div>
-            <h3>Save</h3>
-            <p>Post with no money down and let drivers undercut each other. You watch the bids fall, then pick the one you want. Escrow only leaves your wallet when you accept.</p>
-            <div class="how">post free → drivers undercut → you accept the bid you like</div>
+          <div class="lineitem"><span>Rider pays</span><b class="tnum">£12.00</b></div>
+          <div class="lineitem"><span>Platform commission</span><b class="tnum">&minus;£3.00</b></div>
+          <div class="lineitem"><span>Price set by</span><b>the platform</b></div>
+          <div class="lineitem" style="border-bottom:0"><span>Payout</span><b>weekly</b></div>
+        </div>
+      </div>
+      <div class="plan us">
+        <div class="ph">
+          <div class="meta">FairRide</div>
+        </div>
+        <div class="pb">
+          <div>
+            <div class="price tnum">£12.00</div>
+            <small>reaches the driver, because nothing is deducted</small>
           </div>
+          <div class="lineitem"><span>Rider pays</span><b class="tnum">£12.00</b></div>
+          <div class="lineitem"><span>Platform commission</span><b class="tnum">&minus;£0.00</b></div>
+          <div class="lineitem"><span>Price set by</span><b>rider and driver</b></div>
+          <div class="lineitem" style="border-bottom:0"><span>Payout</span><b>on drop-off</b></div>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
+</main>
 
-      <section class="closer">
-        <h2>Try it with a wallet you make in one tap.</h2>
-        <p class="sub">Open the app, generate a browser wallet, grab free test MON from the faucet, and post a ride or bid on one. Everything runs on Monad testnet.</p>
-        <div class="cta-row">
-          <a class="btn" href="https://fairride-production-9b12.up.railway.app">Open the app</a>
-          <a class="ghostlink" href="https://fairride-production-9b12.up.railway.app/?present=1">Presentation view &rarr;</a>
-        </div>
-        <p class="addr">Contract · <a href="https://testnet.monadvision.com/address/0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d">0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d</a> · Monad Testnet, chain 10143</p>
-      </section>
-    </main>
+<div class="curb" role="presentation"></div>
 
-    <footer>
-      <span>FairRide · built at Monad Blitz London</span>
-      <span><a href="https://github.com/IgorKochany/monad-blitz-london">github.com/IgorKochany/monad-blitz-london</a></span>
-    </footer>
+<!-- ============ CLOSER ============ -->
+<section class="shell closer">
+  <h2>Make a wallet in one tap and take a ride.</h2>
+  <p>No app store, no sign-up form, no card details. Open it in your browser, claim free test MON from the faucet, and post a ride or bid on one.</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://fairride-production-9b12.up.railway.app">Open FairRide</a>
+    <a class="btn btn-secondary" href="https://fairride-production-9b12.up.railway.app/?present=1">See the live board</a>
   </div>
+</section>
 
-<script>
-  (function () {
-    var btn = document.getElementById("themeBtn");
-    var root = document.documentElement;
-    function current() {
-      var set = root.getAttribute("data-theme");
-      if (set) return set;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    function sync() {
-      var isDark = current() === "dark";
-      btn.textContent = isDark ? "light" : "dark";
-      btn.setAttribute("aria-pressed", String(isDark));
-    }
-    btn.addEventListener("click", function () {
-      var next = current() === "dark" ? "light" : "dark";
-      root.setAttribute("data-theme", next);
-      sync();
-    });
-    sync();
-  })();
-</script>
+<!-- ============ 6. FOOTER ============ -->
+<footer>
+  <div class="shell">
+    <div class="fgrid">
+      <div>
+        <div class="wordmark" style="font-size:21px">Fair<span>Ride</span></div>
+        <p style="font-size:13px; margin-top:var(--s2); max-width:30ch">Peer-to-peer rides where the fare is agreed between two people and nobody stands in the middle.</p>
+      </div>
+      <div>
+        <h4>Ride</h4>
+        <ul>
+          <li><a href="https://fairride-production-9b12.up.railway.app">Post a ride</a></li>
+          <li><a href="#how">How bidding works</a></li>
+          <li><a href="#split">Fare split</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Drive</h4>
+        <ul>
+          <li><a href="https://fairride-production-9b12.up.railway.app">Open jobs</a></li>
+          <li><a href="#drive">What you keep</a></li>
+          <li><a href="https://faucet.monad.xyz">Get test MON</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Verify</h4>
+        <ul>
+          <li><a href="https://testnet.monadvision.com/address/0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d">Contract on explorer</a></li>
+          <li><a href="https://github.com/IgorKochany/monad-blitz-london">Source on GitHub</a></li>
+          <li><a href="https://fairride-production-9b12.up.railway.app/?present=1">Live activity board</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="fbase">
+      <span>Built at Monad Blitz London. Running on testnet, so fares are test MON.</span>
+      <span>0% fees &middot; no owner key &middot; open source</span>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
