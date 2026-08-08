@@ -201,11 +201,11 @@ let rateLive = false;
 const gbp2mon = (g) => gbpPerMon > 0 ? g / gbpPerMon : 0;
 function rateNote() { return rateLive ? "live FX rate" : "demo rate £" + gbpPerMon.toFixed(2) + "/MON"; }
 async function fetchRate() {
-  try {
-    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=gbp");
-    const j = await r.json();
-    if (j && j.monad && j.monad.gbp > 0) { gbpPerMon = j.monad.gbp; rateLive = true; }
-  } catch (e) { /* keep fallback */ }
+  // On Monad *testnet*, MON has no meaningful market price, so a live feed makes a
+  // normal £12 ride cost hundreds of MON (unaffordable from a faucet). We deliberately
+  // price the demo at a fixed, realistic rate (FALLBACK_GBP_PER_MON) so £ amounts map
+  // to sensible MON amounts. Swap this back to a live feed for a mainnet deployment.
+  gbpPerMon = FALLBACK_GBP_PER_MON;
   updEscrowHint();
 }
 
