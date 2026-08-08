@@ -10,12 +10,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
-    --bg: #0e1116; --panel: #161b23; --panel2: #1d2430; --border: #2a3342;
-    --text: #e8edf4; --muted: #8b97a8; --accent: #7c6cf0; --accent2: #9b8ffa;
-    --green: #3ecf8e; --amber: #f0b429; --red: #e5646c;
+    /* Uber-inspired: near-black on white, minimal color, black primary actions */
+    --bg: #ffffff; --panel: #ffffff; --panel2: #f3f3f3; --border: #e2e2e2;
+    --text: #0a0a0a; --muted: #6b6b6b; --accent: #000000; --accent2: #276ef1;
+    --green: #05944f; --amber: #a35a00; --red: #d6006c;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  body { background: var(--bg); color: var(--text); font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
   .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
@@ -26,11 +27,13 @@
   .roles button { background: transparent; border: 0; color: var(--muted); font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
   .roles button.active { background: var(--accent); color: #fff; }
   .walletbar { display: flex; align-items: center; gap: 10px; }
-  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .btn:hover { background: var(--accent2); }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 12px; padding: 11px 18px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s ease; }
+  .btn:hover { background: #262626; }
   .btn.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
-  .btn.small { padding: 6px 12px; font-size: 13px; }
-  .btn.green { background: var(--green); color: #06281a; }
+  .btn.ghost:hover { background: #e8e8e8; }
+  .btn.small { padding: 7px 13px; font-size: 13px; }
+  .btn.green { background: var(--green); color: #fff; }
+  .btn.green:hover { background: #047a41; }
   .btn.red { background: transparent; border: 1px solid var(--red); color: var(--red); }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .addr { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); background: var(--panel); border: 1px solid var(--border); padding: 8px 12px; border-radius: 10px; }
@@ -211,7 +214,7 @@ let role = "watch";
 let rpcIndex = 0;
 let readProvider = new ethers.JsonRpcProvider(RPC_URLS[rpcIndex]);
 let readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
-let signer = null, myAddr = null, writeContract = null;
+let signer = null, myAddr = null, writeContract = null, mmConnected = false;
 let ridesCache = [];
 let pickMap = null, pickA = null, pickB = null, pickMarkers = [];
 let modalMapObj = null;
@@ -260,11 +263,35 @@ async function connect() {
     writeContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
     $("addrLabel").textContent = short(myAddr); $("addrLabel").style.display = "";
     $("connectBtn").style.display = "none"; $("instantBtn").style.display = "none";
+    mmConnected = true;
     toast("Wallet connected ✓");
-    render();
+    render(true);
   } catch (e) { toast("Connect failed: " + (e.shortMessage || e.message)); }
 }
-if (window.ethereum) window.ethereum.on?.("accountsChanged", () => location.reload());
+// Restore an already-authorized MetaMask session on load — no popup, no second press.
+async function eagerConnect() {
+  if (!window.ethereum) return;
+  try {
+    const accs = await window.ethereum.request({ method: "eth_accounts" });
+    if (!accs || !accs.length) return;
+    const bp = new ethers.BrowserProvider(window.ethereum);
+    signer = await bp.getSigner();
+    myAddr = (await signer.getAddress()).toLowerCase();
+    writeContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    $("addrLabel").textContent = short(myAddr); $("addrLabel").style.display = "";
+    $("connectBtn").style.display = "none"; $("instantBtn").style.display = "none";
+    mmConnected = true;
+    render(true);
+  } catch (e) { /* stay disconnected */ }
+}
+// Only react to genuine disconnects or account switches, not the initial connect event.
+if (window.ethereum) {
+  window.ethereum.on?.("accountsChanged", (accs) => {
+    if (!accs || accs.length === 0) { location.reload(); return; }
+    if (mmConnected && myAddr && accs[0].toLowerCase() !== myAddr) location.reload();
+  });
+  window.ethereum.on?.("chainChanged", () => { if (mmConnected) refresh(); });
+}
 
 // ---- ✨ Instant wallet: auto-generated in the browser, zero install ----
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -311,7 +338,7 @@ function initPickMap() {
     } else {
       pickB = e.latlng;
       pickMarkers.push(L.marker(e.latlng).addTo(pickMap).bindPopup("Drop-off").openPopup());
-      pickMarkers.push(L.polyline([pickA, pickB], { color: "#7c6cf0", weight: 3, dashArray: "6 8" }).addTo(pickMap));
+      pickMarkers.push(L.polyline([pickA, pickB], { color: "#276ef1", weight: 4, dashArray: "6 8" }).addTo(pickMap));
       if (!$("toLoc").value) $("toLoc").value = "Drop-off pin";
       toast("Journey set: " + distKm(pickA, pickB).toFixed(1) + " km");
     }
@@ -331,7 +358,7 @@ function openMapForRide(id) {
   const pa = [a.lat, a.lng], pb = [b.lat, b.lng];
   L.marker(pa).addTo(modalMapObj).bindPopup("Pickup: " + esc(a.name));
   L.marker(pb).addTo(modalMapObj).bindPopup("Drop-off: " + esc(b.name));
-  L.polyline([pa, pb], { color: "#7c6cf0", weight: 4, dashArray: "6 8" }).addTo(modalMapObj);
+  L.polyline([pa, pb], { color: "#276ef1", weight: 4, dashArray: "6 8" }).addTo(modalMapObj);
   modalMapObj.fitBounds([pa, pb], { padding: [40, 40] });
   setTimeout(() => modalMapObj.invalidateSize(), 150);
 }
@@ -432,7 +459,7 @@ function rideHead(r) {
   return `<div class="ride-top">
     <div><div class="route">${routeStr(r)}</div>
     <div class="meta">#${r.id} · rider <span class="mono">${short(r.rider)}</span>
-    ${r.status === 0 && Number(r.expiry) > now() ? ' · bids close in <span class="count">' + timeLeft(r.expiry) + '</span>' : ''}
+    ${r.status === 0 && Number(r.expiry) > now() ? ' · bids close in <span class="count" data-exp="' + Number(r.expiry) + '">' + timeLeft(r.expiry) + '</span>' : ''}
     ${r.status === 1 ? ' · driver <span class="mono">' + short(r.driver) + '</span> · ' + fmt(r.agreedPrice) + ' in escrow' : ''}
     ${r.status === 2 ? ' · paid ' + fmt(r.agreedPrice) + ' to <span class="mono">' + short(r.driver) + '</span>' : ''}
     </div></div>
@@ -440,18 +467,37 @@ function rideHead(r) {
 }
 function bidLine(r, b, forRider) {
   const dead = !b.active || Number(b.expiry) <= now() || r.status !== 0;
-  const st = !b.active ? "withdrawn" : Number(b.expiry) <= now() ? "expired" : 'valid <span class="count">' + timeLeft(b.expiry) + '</span>';
+  const st = !b.active ? "withdrawn" : Number(b.expiry) <= now() ? "expired" : 'valid <span class="count" data-exp="' + Number(b.expiry) + '">' + timeLeft(b.expiry) + '</span>';
   let btn = "";
   if (forRider && !dead) btn = `<button class="btn small green" onclick="acceptBid(${r.id},${b.id},'${b.price}','${r.deposit}')">Accept ${fmt(b.price)}</button>`;
   return `<div class="bidrow"><span><span class="mono">${short(b.driver)}</span> bids <b>${fmt(b.price)}</b> · ${st}</span>${btn}</div>`;
 }
 
-function render() {
+// A compact fingerprint of everything render() draws. When it is unchanged we skip
+// the full innerHTML rebuild, so typing in a bid box is never wiped and the 1s tick
+// (which only touches countdown text) does the live updating instead.
+function ridesSig() {
+  return role + "|" + (myAddr || "") + "|" + gbpPerMon.toFixed(4) + "|" + ridesCache.map(r =>
+    r.id + ":" + r.status + ":" + r.expiry + ":" + r.deposit + ":" + r.agreedPrice + ":" + r.driver +
+    ":" + (r.status === 0 && Number(r.expiry) <= now() ? "X" : "") +
+    ":" + r.bids.map(b => b.price + "," + b.active + "," + b.driver + "," + (Number(b.expiry) <= now() ? "x" : "")).join(";")
+  ).join("|");
+}
+let lastSig = null;
+function render(force) {
   if (PRESENT) { renderPresent(); return; }
+  const sig = ridesSig();
+  if (!force && sig === lastSig) return; // nothing changed — leave the DOM (and any half-typed bid) alone
+  lastSig = sig;
+  // Preserve whatever input the user is currently typing in across the rebuild.
+  const ae = document.activeElement;
+  const keepId = ae && ae.tagName === "INPUT" && ae.id ? ae.id : null;
+  const keepVal = keepId ? ae.value : null;
+  const keepPos = keepId ? ae.selectionStart : null;
   ["riderView", "driverView", "watchView"].forEach(v => $(v).style.display = "none");
   $(role + "View").style.display = "";
   document.querySelectorAll("#roleTabs button").forEach(b => b.classList.toggle("active", b.dataset.role === role));
-  if (role === "rider") initPickMap();
+  if (role === "rider") { initPickMap(); setTimeout(() => { if (pickMap) pickMap.invalidateSize(); }, 80); }
 
   $("watchRides").innerHTML = ridesCache.length ? ridesCache.map(r =>
     `<div class="ride">${rideHead(r)}${r.bids.length ? '<div class="bids">' + r.bids.map(b => bidLine(r, b, false)).join("") + "</div>" : ""}</div>`
@@ -489,6 +535,12 @@ function render() {
       <div class="meta" style="margin-top:6px">${r.status === 1 ? "🚗 Drive! " + fmt(r.agreedPrice) + " is escrowed — the rider releases it on completion." : "💰 Paid out."}</div></div>`).join("")
       : '<div class="empty">Nothing matched yet.</div>';
   }
+
+  // Put the cursor back where the user was typing (e.g. a driver's bid amount).
+  if (keepId) {
+    const el = $(keepId);
+    if (el) { el.value = keepVal; try { el.focus(); if (keepPos != null) el.setSelectionRange(keepPos, keepPos); } catch (e) {} }
+  }
 }
 
 // ================= PRESENT MODE =================
@@ -516,7 +568,10 @@ document.querySelectorAll("#roleTabs button").forEach(b => b.onclick = () => { r
 $("connectBtn").onclick = connect;
 $("instantBtn").onclick = instantConnect;
 $("postBtn").onclick = postRide;
-if (stored("fairride_pk") && !PRESENT) instantConnect(); // returning guests auto-login
+if (!PRESENT) {
+  if (stored("fairride_pk")) instantConnect();   // returning instant-wallet guests auto-login
+  else eagerConnect();                            // returning MetaMask users restore silently
+}
 setInterval(refreshBalance, 5000);
 ["price", "cur", "mode"].forEach(id => { $(id).addEventListener("input", updEscrowHint); $(id).addEventListener("change", updEscrowHint); });
 updEscrowHint();
@@ -524,7 +579,15 @@ fetchRate(); setInterval(fetchRate, 60000);
 if (CONTRACT_ADDRESS.startsWith("PASTE")) toast("⚠ Not wired to a contract yet — open this page as ?c=0xYourContractAddress after deploying.", 12000);
 refresh();
 setInterval(refresh, POLL_MS);
-setInterval(render, 1000); // tick countdowns
+// Tick only the countdown numbers every second — no DOM rebuild, so inputs never reset.
+function tickCountdowns() {
+  const t = now();
+  document.querySelectorAll(".count[data-exp]").forEach(el => {
+    const s = Number(el.dataset.exp) - t;
+    el.textContent = s <= 0 ? "expired" : (s >= 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : s + "s");
+  });
+}
+setInterval(tickCountdowns, 1000);
 </script>
 </body>
 </html>
