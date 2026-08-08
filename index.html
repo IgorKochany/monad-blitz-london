@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FairRide — P2P rides on Monad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b23; --panel2: #1d2430; --border: #2a3342;
+    --text: #e8edf4; --muted: #8b97a8; --accent: #7c6cf0; --accent2: #9b8ffa;
+    --green: #3ecf8e; --amber: #f0b429; --red: #e5646c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent2); }
+  .tag { font-size: 12px; color: var(--muted); }
+  .tag a { color: var(--accent2); }
+  .roles { display: flex; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 5px; }
+  .roles button { background: transparent; border: 0; color: var(--muted); font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  .roles button.active { background: var(--accent); color: #fff; }
+  .walletbar { display: flex; align-items: center; gap: 10px; }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn:hover { background: var(--accent2); }
+  .btn.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.green { background: var(--green); color: #06281a; }
+  .btn.red { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .addr { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); background: var(--panel); border: 1px solid var(--border); padding: 8px 12px; border-radius: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 16px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, select { width: 100%; background: var(--panel2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 10px 12px; font-size: 14px; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .ride { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .ride-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .route { font-size: 15px; font-weight: 700; }
+  .route .arrow { color: var(--accent2); margin: 0 6px; }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .pill.open { background: rgba(62,207,142,0.15); color: var(--green); }
+  .pill.matched { background: rgba(124,108,240,0.18); color: var(--accent2); }
+  .pill.done { background: rgba(139,151,168,0.15); color: var(--muted); }
+  .pill.cancelled { background: rgba(229,100,108,0.15); color: var(--red); }
+  .pill.auto { background: rgba(240,180,41,0.15); color: var(--amber); }
+  .count { font-variant-numeric: tabular-nums; color: var(--amber); font-weight: 700; }
+  .bids { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  .bidrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; flex-wrap: wrap; }
+  .bidform { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .bidform input { width: 130px; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--accent); color: var(--text); padding: 12px 20px; border-radius: 12px; font-size: 14px; display: none; max-width: 90vw; z-index: 300; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .mono { font-family: ui-monospace, monospace; }
+  #pickMap { height: 260px; border-radius: 10px; border: 1px solid var(--border); grid-column: 1 / -1; z-index: 1; }
+  .maphint { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
+  #mapModal { position: fixed; inset: 0; background: rgba(6,8,12,0.8); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+  #mapModal .inner { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; width: min(680px, 96vw); }
+  #modalMap { height: min(420px, 60vh); border-radius: 10px; }
+  #mapModal .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+  /* Present mode */
+  #presentView { text-align: center; padding-top: 4vh; }
+  #presentView .biglogo { font-size: 44px; font-weight: 800; letter-spacing: -1px; }
+  #presentView .sub { color: var(--muted); font-size: 17px; margin: 8px 0 22px; }
+  #qrbox { background: #fff; display: inline-block; padding: 16px; border-radius: 16px; }
+  #presentStats { font-size: 18px; margin: 18px 0 8px; color: var(--accent2); font-weight: 700; }
+  #presentFeed { max-width: 560px; margin: 10px auto 0; text-align: left; }
+  #presentFeed .ride { font-size: 15px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .roles button { padding: 8px 10px; font-size: 13px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="appWrap">
+  <header>
+    <div>
+      <div class="logo">Fair<span>Ride</span></div>
+      <div class="tag">Riders &amp; drivers agree the price. 0% fees. Monad Testnet · <a href="https://faucet.monad.xyz" target="_blank">get free test MON</a></div>
+    </div>
+    <div class="roles" id="roleTabs">
+      <button data-role="rider">🙋 Rider</button>
+      <button data-role="driver">🚗 Driver</button>
+      <button data-role="watch" class="active">👀 Watch</button>
+    </div>
+    <div class="walletbar">
+      <span class="live"><span class="dot"></span><span id="liveLabel">live</span></span>
+      <span class="addr" id="addrLabel" style="display:none; cursor:pointer" title="Tap to copy your address"></span>
+      <button class="btn" id="instantBtn" title="No install — a wallet is generated right in your browser">✨ Instant wallet</button>
+      <button class="btn ghost" id="connectBtn">🦊 MetaMask</button>
+    </div>
+  </header>
+
+  <!-- RIDER -->
+  <section id="riderView" style="display:none">
+    <div class="card">
+      <h2>Post a trip</h2>
+      <div class="grid">
+        <div id="pickMap"></div>
+        <div class="maphint">🗺 Tap the map: 1st tap = <b>pickup</b>, 2nd tap = <b>drop-off</b> (3rd starts over) — or just type names below.</div>
+        <div><label>From</label><input id="fromLoc" placeholder="e.g. Shoreditch"></div>
+        <div><label>To</label><input id="toLoc" placeholder="e.g. Canary Wharf"></div>
+        <div><label>Your price</label>
+          <div style="display:flex; gap:8px">
+            <input id="price" type="number" step="0.01" min="0" placeholder="12.50">
+            <select id="cur" style="width:92px"><option value="gbp">£ GBP</option><option value="mon">MON</option></select>
+          </div>
+        </div>
+        <div><label>Mode</label>
+          <select id="mode">
+            <option value="auto">⚡ Need it fast (speed prioritized) — first bid at/under your price wins instantly</option>
+            <option value="manual">💰 Review bids (saving money prioritized) — pick the best offer yourself</option>
+          </select>
+        </div>
+        <div class="maphint" id="escrowHint" style="margin-top:0"></div>
+        <div><label>Open for bids (minutes)</label><input id="rideMins" type="number" min="1" value="15"></div>
+        <div style="display:flex; align-items:flex-end"><button class="btn" id="postBtn" style="width:100%">Post trip</button></div>
+      </div>
+    </div>
+    <div class="card"><h2>My trips</h2><div id="riderRides"><div class="empty">Connect your wallet to see your trips.</div></div></div>
+  </section>
+
+  <!-- DRIVER -->
+  <section id="driverView" style="display:none">
+    <div class="card"><h2>Open trips — bid to win the fare</h2><div id="driverRides"><div class="empty">Waiting for trips…</div></div></div>
+    <div class="card"><h2>My fares</h2><div id="driverMatched"><div class="empty">Nothing matched yet.</div></div></div>
+  </section>
+
+  <!-- WATCH -->
+  <section id="watchView">
+    <div class="card"><h2>All activity</h2><div id="watchRides"><div class="empty">Loading from Monad…</div></div></div>
+  </section>
+</div>
+
+<!-- PRESENT MODE (?present=1) -->
+<div class="wrap" id="presentView" style="display:none">
+  <div class="biglogo">Fair<span style="color:var(--accent2)">Ride</span></div>
+  <div class="sub">Uber without the middleman — you set the price, on Monad.<br><b>Scan to join as a rider or driver →</b></div>
+  <div id="qrbox"></div>
+  <div id="presentStats">…</div>
+  <div id="presentFeed"></div>
+</div>
+
+<!-- MAP MODAL -->
+<div id="mapModal">
+  <div class="inner">
+    <div class="top"><b id="modalTitle">Journey</b><button class="btn ghost small" onclick="closeMap()">✕ Close</button></div>
+    <div id="modalMap"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+// ================= CONFIG =================
+// Contract address: set the constant below, OR just open the site as
+// https://your-site/?c=0xYourContractAddress  (URL wins over the constant)
+const HARDCODED_ADDRESS = "PASTE_CONTRACT_ADDRESS_HERE";
+const CONTRACT_ADDRESS = new URLSearchParams(location.search).get("c") || HARDCODED_ADDRESS;
+const RPC_URLS = [
+  "https://testnet-rpc.monad.xyz",
+  "https://rpc.ankr.com/monad_testnet",
+  "https://rpc-testnet.monadinfra.com"
+];
+const CHAIN_ID_HEX = "0x279f"; // 10143
+const CHAIN_PARAMS = {
+  chainId: CHAIN_ID_HEX, chainName: "Monad Testnet",
+  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+  rpcUrls: [RPC_URLS[0]], blockExplorerUrls: ["https://testnet.monadvision.com"]
+};
+const ABI = [
+  "function rideCount() view returns (uint256)",
+  "function rides(uint256) view returns (address rider, string fromLoc, string toLoc, uint256 maxPrice, uint256 expiry, uint8 status, address driver, uint256 agreedPrice, uint256 deposit)",
+  "function bids(uint256, uint256) view returns (address driver, uint256 price, uint256 expiry, bool active)",
+  "function bidCount(uint256) view returns (uint256)",
+  "function postRide(string fromLoc, string toLoc, uint256 maxPrice, uint256 expiry) payable returns (uint256)",
+  "function bid(uint256 rideId, uint256 price, uint256 bidExpiry)",
+  "function acceptBid(uint256 rideId, uint256 bidId) payable",
+  "function completeRide(uint256 rideId)",
+  "function cancelRide(uint256 rideId)",
+  "function withdrawBid(uint256 rideId, uint256 bidId)"
+];
+const POLL_MS = 2500;
+const PRESENT = new URLSearchParams(location.search).get("present") === "1";
+
+// ---- GBP pricing: users think in £, the chain settles in MON ----
+const FALLBACK_GBP_PER_MON = 2.00;   // demo rate, used if live fetch fails — edit freely
+let gbpPerMon = FALLBACK_GBP_PER_MON;
+let rateLive = false;
+const gbp2mon = (g) => gbpPerMon > 0 ? g / gbpPerMon : 0;
+function rateNote() { return rateLive ? "live FX rate" : "demo rate £" + gbpPerMon.toFixed(2) + "/MON"; }
+async function fetchRate() {
+  try {
+    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=gbp");
+    const j = await r.json();
+    if (j && j.monad && j.monad.gbp > 0) { gbpPerMon = j.monad.gbp; rateLive = true; }
+  } catch (e) { /* keep fallback */ }
+  updEscrowHint();
+}
+
+// ================= STATE =================
+let role = "watch";
+let rpcIndex = 0;
+let readProvider = new ethers.JsonRpcProvider(RPC_URLS[rpcIndex]);
+let readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
+let signer = null, myAddr = null, writeContract = null;
+let ridesCache = [];
+let pickMap = null, pickA = null, pickB = null, pickMarkers = [];
+let modalMapObj = null;
+
+const $ = (id) => document.getElementById(id);
+const monF = (wei) => (+ethers.formatEther(wei)).toFixed(4).replace(/\.?0+$/, "");
+const fmt = (wei) => "£" + (+ethers.formatEther(wei) * gbpPerMon).toFixed(2) + " (" + monF(wei) + " MON)";
+const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const now = () => Math.floor(Date.now() / 1000);
+function toast(msg, ms = 3500) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms); }
+function timeLeft(exp) { const s = Number(exp) - now(); if (s <= 0) return "expired"; const m = Math.floor(s / 60); return m > 0 ? `${m}m ${s % 60}s` : `${s}s`; }
+function rotateRpc() {
+  rpcIndex = (rpcIndex + 1) % RPC_URLS.length;
+  readProvider = new ethers.JsonRpcProvider(RPC_URLS[rpcIndex]);
+  readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
+  if (burner) { signer = burner.connect(readProvider); writeContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer); }
+}
+
+// Locations are stored on-chain as "Name @lat,lng" (coords optional).
+function encLoc(name, pt) { return pt ? `${name} @${pt.lat.toFixed(5)},${pt.lng.toFixed(5)}` : name; }
+function parseLoc(s) {
+  const m = s.match(/^(.*?)\s*@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+  return m ? { name: m[1] || "pin", lat: +m[2], lng: +m[3] } : { name: s, lat: null, lng: null };
+}
+function distKm(a, b) {
+  const R = 6371, dLa = (b.lat - a.lat) * Math.PI / 180, dLo = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// ================= WALLET =================
+async function connect() {
+  if (!window.ethereum) { toast("No wallet in this browser. On mobile: open this URL inside MetaMask's in-app browser."); return; }
+  try {
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_ID_HEX }] });
+    } catch (e) {
+      if (e.code === 4902) await window.ethereum.request({ method: "wallet_addEthereumChain", params: [CHAIN_PARAMS] });
+      else throw e;
+    }
+    const bp = new ethers.BrowserProvider(window.ethereum);
+    signer = await bp.getSigner();
+    myAddr = (await signer.getAddress()).toLowerCase();
+    writeContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    $("addrLabel").textContent = short(myAddr); $("addrLabel").style.display = "";
+    $("connectBtn").style.display = "none"; $("instantBtn").style.display = "none";
+    toast("Wallet connected ✓");
+    render();
+  } catch (e) { toast("Connect failed: " + (e.shortMessage || e.message)); }
+}
+if (window.ethereum) window.ethereum.on?.("accountsChanged", () => location.reload());
+
+// ---- ✨ Instant wallet: auto-generated in the browser, zero install ----
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function stored(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+let burner = null;
+function instantConnect() {
+  const pk = stored("fairride_pk");
+  burner = pk ? new ethers.Wallet(pk) : ethers.Wallet.createRandom();
+  if (!pk) { store("fairride_pk", burner.privateKey); toast("✨ Wallet created in your browser! Tap your address (top right) to copy it, then grab free MON at faucet.monad.xyz", 9000); }
+  signer = burner.connect(readProvider);
+  myAddr = burner.address.toLowerCase();
+  writeContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  $("addrLabel").style.display = "";
+  $("connectBtn").style.display = "none"; $("instantBtn").style.display = "none";
+  refreshBalance(); render();
+}
+async function refreshBalance() {
+  if (!burner) return;
+  try {
+    const b = await readProvider.getBalance(burner.address);
+    const bal = +ethers.formatEther(b);
+    $("addrLabel").textContent = "✨ " + short(myAddr) + " · " + bal.toFixed(3) + " MON";
+    if (bal === 0) $("addrLabel").style.borderColor = "var(--amber)";
+    else $("addrLabel").style.borderColor = "var(--border)";
+  } catch (e) {}
+}
+$("addrLabel").onclick = async () => {
+  if (!myAddr) return;
+  try { await navigator.clipboard.writeText(ethers.getAddress(myAddr)); toast("Address copied — paste it at faucet.monad.xyz for free test MON"); }
+  catch (e) { toast(ethers.getAddress(myAddr), 8000); }
+};
+
+// ================= MAP: pick pickup/dropoff =================
+function initPickMap() {
+  if (pickMap || !window.L) return;
+  pickMap = L.map("pickMap").setView([51.5074, -0.1278], 12); // London
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(pickMap);
+  pickMap.on("click", (e) => {
+    if (pickA && pickB) { pickMarkers.forEach(m => pickMap.removeLayer(m)); pickMarkers = []; pickA = pickB = null; }
+    if (!pickA) {
+      pickA = e.latlng;
+      pickMarkers.push(L.marker(e.latlng).addTo(pickMap).bindPopup("Pickup").openPopup());
+      if (!$("fromLoc").value) $("fromLoc").value = "Pickup pin";
+    } else {
+      pickB = e.latlng;
+      pickMarkers.push(L.marker(e.latlng).addTo(pickMap).bindPopup("Drop-off").openPopup());
+      pickMarkers.push(L.polyline([pickA, pickB], { color: "#7c6cf0", weight: 3, dashArray: "6 8" }).addTo(pickMap));
+      if (!$("toLoc").value) $("toLoc").value = "Drop-off pin";
+      toast("Journey set: " + distKm(pickA, pickB).toFixed(1) + " km");
+    }
+  });
+  setTimeout(() => pickMap.invalidateSize(), 150);
+}
+
+function openMapForRide(id) {
+  const r = ridesCache.find(x => x.id === id); if (!r) return;
+  const a = parseLoc(r.fromLoc), b = parseLoc(r.toLoc);
+  if (a.lat === null || b.lat === null) return toast("No map pins on this trip.");
+  $("mapModal").style.display = "flex";
+  $("modalTitle").textContent = `#${id} · ${a.name} → ${b.name} · ${distKm(a, b).toFixed(1)} km`;
+  if (modalMapObj) { modalMapObj.remove(); modalMapObj = null; }
+  modalMapObj = L.map("modalMap");
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(modalMapObj);
+  const pa = [a.lat, a.lng], pb = [b.lat, b.lng];
+  L.marker(pa).addTo(modalMapObj).bindPopup("Pickup: " + esc(a.name));
+  L.marker(pb).addTo(modalMapObj).bindPopup("Drop-off: " + esc(b.name));
+  L.polyline([pa, pb], { color: "#7c6cf0", weight: 4, dashArray: "6 8" }).addTo(modalMapObj);
+  modalMapObj.fitBounds([pa, pb], { padding: [40, 40] });
+  setTimeout(() => modalMapObj.invalidateSize(), 150);
+}
+function closeMap() { $("mapModal").style.display = "none"; if (modalMapObj) { modalMapObj.remove(); modalMapObj = null; } }
+$("mapModal").addEventListener("click", (e) => { if (e.target.id === "mapModal") closeMap(); });
+
+// ================= READ LOOP =================
+async function refresh() {
+  try {
+    const n = Number(await readContract.rideCount());
+    $("liveLabel").textContent = "live · " + n + " trips";
+    const ids = Array.from({ length: n }, (_, i) => i);
+    const rides = await Promise.all(ids.map(async (i) => {
+      const r = await readContract.rides(i);
+      const bc = Number(await readContract.bidCount(i));
+      const bs = await Promise.all(Array.from({ length: bc }, (_, j) => readContract.bids(i, j)));
+      return { id: i, rider: r.rider.toLowerCase(), fromLoc: r.fromLoc, toLoc: r.toLoc,
+               maxPrice: r.maxPrice, expiry: r.expiry, status: Number(r.status),
+               driver: r.driver.toLowerCase(), agreedPrice: r.agreedPrice, deposit: r.deposit,
+               bids: bs.map((b, j) => ({ id: j, driver: b.driver.toLowerCase(), price: b.price, expiry: b.expiry, active: b.active })) };
+    }));
+    ridesCache = rides.reverse(); // newest first
+    render();
+  } catch (e) {
+    $("liveLabel").textContent = "reconnecting…";
+    rotateRpc();
+  }
+}
+
+// ================= ACTIONS =================
+async function needWallet() { if (!signer) { toast("Tap ✨ Instant wallet (top right) — one tap, no install."); throw new Error("no wallet"); } }
+async function doTx(label, fn) {
+  try { toast(label + " — confirm in wallet…", 15000);
+    const tx = await fn(); toast(label + " — pending…", 20000);
+    await tx.wait(); toast(label + " ✓"); refresh();
+  } catch (e) { toast(label + " failed: " + (e.shortMessage || e.reason || e.message), 6000); }
+}
+function updEscrowHint() {
+  const el = $("escrowHint"); if (!el) return;
+  const v = Number($("price").value || 0);
+  if (v <= 0) { el.textContent = "Priced in £ — settled in MON on-chain (" + rateNote() + ")."; return; }
+  const mon = $("cur").value === "gbp" ? gbp2mon(v) : v;
+  const gbp = $("cur").value === "gbp" ? v : v * gbpPerMon;
+  const auto = $("mode").value === "auto";
+  el.innerHTML = `💸 ${auto ? "Taken from your wallet <b>now</b> (escrow)" : "Max you'd pay — taken only when you accept a bid"}: <b>${mon.toFixed(4)} MON</b> ≈ £${gbp.toFixed(2)} · ${rateNote()}`;
+}
+
+async function postRide() {
+  await needWallet();
+  const from = $("fromLoc").value.trim(), to = $("toLoc").value.trim();
+  const priceStr = $("price").value, mins = Number($("rideMins").value || 15);
+  if (!from || !to) return toast("Enter both locations (type or tap the map).");
+  if (!priceStr || Number(priceStr) <= 0) return toast("Enter a price.");
+  const monAmt = $("cur").value === "gbp" ? gbp2mon(Number(priceStr)) : Number(priceStr);
+  if (monAmt <= 0) return toast("Price converts to 0 MON — check the rate.");
+  const price = ethers.parseEther(monAmt.toFixed(9));
+  const expiry = now() + mins * 60;
+  const auto = $("mode").value === "auto";
+  const fromEnc = encLoc(from, pickA), toEnc = encLoc(to, pickB);
+  await doTx("Post trip", () => writeContract.postRide(fromEnc, toEnc, price, expiry, { value: auto ? price : 0n, gasLimit: 500000 }));
+  $("fromLoc").value = ""; $("toLoc").value = "";
+  pickMarkers.forEach(m => pickMap && pickMap.removeLayer(m)); pickMarkers = []; pickA = pickB = null;
+}
+async function placeBid(rideId, inputId, curId, minsId) {
+  await needWallet();
+  const p = Number($(inputId).value); if (!p || p <= 0) return toast("Enter your bid.");
+  const mins = Number($(minsId).value || 10);
+  const monAmt = $(curId).value === "gbp" ? gbp2mon(p) : p;
+  if (monAmt <= 0) return toast("Bid converts to 0 MON — check the rate.");
+  const label = $(curId).value === "gbp" ? "Bid £" + p.toFixed(2) + " (" + monAmt.toFixed(4) + " MON)" : "Bid " + p + " MON";
+  await doTx(label, () => writeContract.bid(rideId, ethers.parseEther(monAmt.toFixed(9)), now() + mins * 60, { gasLimit: 400000 }));
+}
+async function acceptBid(rideId, bidId, priceWei, depositWei) {
+  await needWallet();
+  const topUp = BigInt(priceWei) > BigInt(depositWei) ? BigInt(priceWei) - BigInt(depositWei) : 0n;
+  await doTx("Accept bid", () => writeContract.acceptBid(rideId, bidId, { value: topUp, gasLimit: 400000 }));
+}
+async function completeRide(id) { await needWallet(); await doTx("Complete & pay driver", () => writeContract.completeRide(id, { gasLimit: 300000 })); }
+async function cancelRide(id) { await needWallet(); await doTx("Cancel trip", () => writeContract.cancelRide(id, { gasLimit: 300000 })); }
+
+// ================= RENDER =================
+function hasPins(r) { return parseLoc(r.fromLoc).lat !== null && parseLoc(r.toLoc).lat !== null; }
+function routeStr(r) {
+  const a = parseLoc(r.fromLoc), b = parseLoc(r.toLoc);
+  let s = `${esc(a.name)}<span class="arrow">→</span>${esc(b.name)}`;
+  if (a.lat !== null && b.lat !== null) s += ` <span class="meta">(${distKm(a, b).toFixed(1)} km)</span>`;
+  return s;
+}
+function pill(r) {
+  if (r.status === 0) return Number(r.expiry) <= now()
+    ? '<span class="pill cancelled">Expired</span>'
+    : '<span class="pill open">Open</span>' + (BigInt(r.deposit) > 0n ? ' <span class="pill auto">⚡ auto ≤ ' + fmt(r.maxPrice) + '</span>' : '');
+  if (r.status === 1) return '<span class="pill matched">Matched</span>';
+  if (r.status === 2) return '<span class="pill done">Completed</span>';
+  return '<span class="pill cancelled">Cancelled</span>';
+}
+function rideHead(r) {
+  return `<div class="ride-top">
+    <div><div class="route">${routeStr(r)}</div>
+    <div class="meta">#${r.id} · rider <span class="mono">${short(r.rider)}</span>
+    ${r.status === 0 && Number(r.expiry) > now() ? ' · bids close in <span class="count">' + timeLeft(r.expiry) + '</span>' : ''}
+    ${r.status === 1 ? ' · driver <span class="mono">' + short(r.driver) + '</span> · ' + fmt(r.agreedPrice) + ' in escrow' : ''}
+    ${r.status === 2 ? ' · paid ' + fmt(r.agreedPrice) + ' to <span class="mono">' + short(r.driver) + '</span>' : ''}
+    </div></div>
+    <div>${hasPins(r) ? `<button class="btn ghost small" onclick="openMapForRide(${r.id})">🗺 Map</button> ` : ""}${pill(r)}</div></div>`;
+}
+function bidLine(r, b, forRider) {
+  const dead = !b.active || Number(b.expiry) <= now() || r.status !== 0;
+  const st = !b.active ? "withdrawn" : Number(b.expiry) <= now() ? "expired" : 'valid <span class="count">' + timeLeft(b.expiry) + '</span>';
+  let btn = "";
+  if (forRider && !dead) btn = `<button class="btn small green" onclick="acceptBid(${r.id},${b.id},'${b.price}','${r.deposit}')">Accept ${fmt(b.price)}</button>`;
+  return `<div class="bidrow"><span><span class="mono">${short(b.driver)}</span> bids <b>${fmt(b.price)}</b> · ${st}</span>${btn}</div>`;
+}
+
+function render() {
+  if (PRESENT) { renderPresent(); return; }
+  ["riderView", "driverView", "watchView"].forEach(v => $(v).style.display = "none");
+  $(role + "View").style.display = "";
+  document.querySelectorAll("#roleTabs button").forEach(b => b.classList.toggle("active", b.dataset.role === role));
+  if (role === "rider") initPickMap();
+
+  $("watchRides").innerHTML = ridesCache.length ? ridesCache.map(r =>
+    `<div class="ride">${rideHead(r)}${r.bids.length ? '<div class="bids">' + r.bids.map(b => bidLine(r, b, false)).join("") + "</div>" : ""}</div>`
+  ).join("") : '<div class="empty">No trips yet — be the first to post one.</div>';
+
+  if (role === "rider") {
+    const mine = ridesCache.filter(r => myAddr && r.rider === myAddr);
+    $("riderRides").innerHTML = !myAddr ? '<div class="empty">Connect your wallet to see your trips.</div>'
+      : mine.length ? mine.map(r => `<div class="ride">${rideHead(r)}
+          ${r.bids.length ? '<div class="bids">' + r.bids.map(b => bidLine(r, b, true)).join("") + "</div>" : '<div class="meta" style="margin-top:8px">No bids yet — drivers see this instantly.</div>'}
+          <div class="bidform">
+            ${r.status === 1 ? `<button class="btn small green" onclick="completeRide(${r.id})">✓ Ride done — release payment</button>` : ""}
+            ${r.status === 0 ? `<button class="btn small red" onclick="cancelRide(${r.id})">Cancel${BigInt(r.deposit) > 0n ? " & refund" : ""}</button>` : ""}
+          </div></div>`).join("")
+      : '<div class="empty">You haven’t posted a trip yet.</div>';
+  }
+
+  if (role === "driver") {
+    const open = ridesCache.filter(r => r.status === 0 && Number(r.expiry) > now() && (!myAddr || r.rider !== myAddr));
+    $("driverRides").innerHTML = open.length ? open.map(r => {
+      const mineBid = myAddr && r.bids.some(b => b.driver === myAddr && b.active);
+      return `<div class="ride">${rideHead(r)}
+        <div class="meta" style="margin-top:6px">${BigInt(r.deposit) > 0n ? "⚡ Rider needs it <b>fast</b>: bid ≤ " + fmt(r.maxPrice) + " and you win <b>instantly</b> — funds already escrowed." : "💰 Rider is price-hunting (suggests ~" + fmt(r.maxPrice) + ") · undercut the other bids to win."}</div>
+        ${r.bids.length ? '<div class="bids">' + r.bids.map(b => bidLine(r, b, false)).join("") + "</div>" : ""}
+        <div class="bidform">
+          <input id="bp${r.id}" type="number" step="0.01" min="0" placeholder="Your price">
+          <select id="bc${r.id}" style="width:76px"><option value="gbp">£</option><option value="mon">MON</option></select>
+          <input id="bm${r.id}" type="number" min="1" value="10" title="bid valid (min)" style="width:70px">
+          <button class="btn small" onclick="placeBid(${r.id},'bp${r.id}','bc${r.id}','bm${r.id}')">${mineBid ? "Bid again" : "Place bid"}</button>
+        </div></div>`;
+    }).join("") : '<div class="empty">No open trips right now — they appear here the second a rider posts.</div>';
+
+    const mine = ridesCache.filter(r => myAddr && r.driver === myAddr && r.status >= 1);
+    $("driverMatched").innerHTML = mine.length ? mine.map(r => `<div class="ride">${rideHead(r)}
+      <div class="meta" style="margin-top:6px">${r.status === 1 ? "🚗 Drive! " + fmt(r.agreedPrice) + " is escrowed — the rider releases it on completion." : "💰 Paid out."}</div></div>`).join("")
+      : '<div class="empty">Nothing matched yet.</div>';
+  }
+}
+
+// ================= PRESENT MODE =================
+let qrDone = false;
+function renderPresent() {
+  $("appWrap").style.display = "none";
+  $("presentView").style.display = "";
+  if (!qrDone && window.QRCode) {
+    const joinUrl = location.origin + location.pathname + (CONTRACT_ADDRESS.startsWith("PASTE") ? "" : "?c=" + CONTRACT_ADDRESS);
+    new QRCode($("qrbox"), { text: joinUrl, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+    qrDone = true;
+  }
+  const open = ridesCache.filter(r => r.status === 0 && Number(r.expiry) > now()).length;
+  const matched = ridesCache.filter(r => r.status === 1).length;
+  const done = ridesCache.filter(r => r.status === 2).length;
+  const totalBids = ridesCache.reduce((s, r) => s + r.bids.length, 0);
+  $("presentStats").textContent = `${ridesCache.length} trips · ${totalBids} bids · ${open} open · ${matched} matched · ${done} completed`;
+  $("presentFeed").innerHTML = ridesCache.slice(0, 5).map(r =>
+    `<div class="ride">${rideHead(r)}${r.bids.length ? '<div class="bids">' + r.bids.slice(-3).map(b => bidLine(r, b, false)).join("") + "</div>" : ""}</div>`
+  ).join("");
+}
+
+// ================= INIT =================
+document.querySelectorAll("#roleTabs button").forEach(b => b.onclick = () => { role = b.dataset.role; render(); });
+$("connectBtn").onclick = connect;
+$("instantBtn").onclick = instantConnect;
+$("postBtn").onclick = postRide;
+if (stored("fairride_pk") && !PRESENT) instantConnect(); // returning guests auto-login
+setInterval(refreshBalance, 5000);
+["price", "cur", "mode"].forEach(id => { $(id).addEventListener("input", updEscrowHint); $(id).addEventListener("change", updEscrowHint); });
+updEscrowHint();
+fetchRate(); setInterval(fetchRate, 60000);
+if (CONTRACT_ADDRESS.startsWith("PASTE")) toast("⚠ Not wired to a contract yet — open this page as ?c=0xYourContractAddress after deploying.", 12000);
+refresh();
+setInterval(refresh, POLL_MS);
+setInterval(render, 1000); // tick countdowns
+</script>
+</body>
+</html>
