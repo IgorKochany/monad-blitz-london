@@ -155,6 +155,25 @@
   #presentStats { font-family: var(--display); font-size: 19px; margin: 20px 0 8px; color: var(--signal); font-weight: 800; font-variant-numeric: tabular-nums; }
   #presentFeed { max-width: 560px; margin: 12px auto 0; text-align: left; }
 
+  /* ---------- postcode tag on route stops ---------- */
+  .pc { font-size: 11px; font-weight: 700; color: var(--body); background: var(--bg); border: 2px solid var(--muted); padding: 1px 6px; border-radius: var(--radius); margin-left: 6px; letter-spacing: .03em; vertical-align: 2px; white-space: nowrap; }
+
+  /* ---------- role gate ---------- */
+  #roleGate { position: fixed; inset: 0; z-index: 500; background: var(--bg); display: none; align-items: center; justify-content: center; padding: 24px; }
+  #roleGate.show { display: flex; }
+  .gate-inner { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; text-align: center; }
+  .gate-logo { font-family: var(--mark); font-size: 40px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 2px; }
+  .gate-logo span { background: var(--accent); border: var(--border); padding: 0 8px; }
+  .gate-sub { color: var(--body); font-size: 15px; line-height: 1.5; margin-bottom: 14px; }
+  .gate-btn { display: flex; flex-direction: column; gap: 4px; text-align: left; background: var(--accent); border: var(--border); border-radius: var(--radius); padding: 18px 20px; cursor: pointer; font-family: var(--font); transition: transform .08s ease; }
+  .gate-btn:hover { transform: translateY(-2px); }
+  .gate-btn:active { transform: translateY(0); }
+  .gate-btn.drive { background: var(--ink); }
+  .gate-btn .gb-title { font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+  .gate-btn.drive .gb-title { color: var(--accent); }
+  .gate-btn .gb-sub { font-size: 13px; font-weight: 600; color: var(--body); }
+  .gate-btn.drive .gb-sub { color: #b8b4a0; }
+
   @media (max-width: 640px) {
     .grid { grid-template-columns: 1fr; }
     header { gap: 10px; }
@@ -174,7 +193,6 @@
     <div class="roles" id="roleTabs">
       <button data-role="rider">Rider</button>
       <button data-role="driver">Driver</button>
-      <button data-role="watch" class="active">Watch</button>
     </div>
     <div class="walletbar">
       <span class="live"><span class="dot"></span><span id="liveLabel">live</span></span>
@@ -222,11 +240,22 @@
     <div id="driverMatched"><div class="empty">Nothing matched yet.</div></div>
   </section>
 
-  <!-- WATCH -->
-  <section id="watchView">
-    <div class="sechead"><h2>Live activity</h2><span class="hint">every ride, on-chain</span></div>
-    <div id="watchRides"><div class="empty">Loading from Monad…</div></div>
-  </section>
+</div>
+
+<!-- ROLE GATE: first thing a new user sees — pick a side, like a real app -->
+<div id="roleGate">
+  <div class="gate-inner">
+    <div class="gate-logo">Fair<span>Ride</span></div>
+    <div class="gate-sub">You name the fare. Drivers bid it down.<br>0% fees, settled on Monad.</div>
+    <button class="gate-btn" data-pick="rider">
+      <span class="gb-title">I need a ride</span>
+      <span class="gb-sub">Set your price, watch drivers compete for it</span>
+    </button>
+    <button class="gate-btn drive" data-pick="driver">
+      <span class="gb-title">I want to drive</span>
+      <span class="gb-sub">Pick your jobs, keep 100% of every fare</span>
+    </button>
+  </div>
 </div>
 
 <!-- PRESENT MODE (?present=1) -->
@@ -254,10 +283,13 @@
 // https://your-site/?c=0xYourContractAddress  (URL wins over the constant)
 const HARDCODED_ADDRESS = "0x02F23eEd91574f5cF9F48A2Acc020978C04c3f1d";
 const CONTRACT_ADDRESS = new URLSearchParams(location.search).get("c") || HARDCODED_ADDRESS;
+// Ankr first: measured as the endpoint that reliably serves eth_call to
+// browsers under load. The official RPC (fallback) rate-limits site-wide at
+// 50 req/s shared. monadinfra is deliberately NOT listed: it rejects
+// cross-origin browser fetches, so rotating onto it strands the read loop.
 const RPC_URLS = [
-  "https://testnet-rpc.monad.xyz",
   "https://rpc.ankr.com/monad_testnet",
-  "https://rpc-testnet.monadinfra.com"
+  "https://testnet-rpc.monad.xyz"
 ];
 const CHAIN_ID_HEX = "0x279f"; // 10143
 const CHAIN_PARAMS = {
@@ -275,9 +307,18 @@ const ABI = [
   "function acceptBid(uint256 rideId, uint256 bidId) payable",
   "function completeRide(uint256 rideId)",
   "function cancelRide(uint256 rideId)",
-  "function withdrawBid(uint256 rideId, uint256 bidId)"
+  "function withdrawBid(uint256 rideId, uint256 bidId)",
+  "event RidePosted(uint256 indexed rideId, address indexed rider, string fromLoc, string toLoc, uint256 maxPrice, uint256 expiry, uint256 deposit)",
+  "event BidPlaced(uint256 indexed rideId, uint256 indexed bidId, address indexed driver, uint256 price, uint256 expiry)",
+  "event Matched(uint256 indexed rideId, address indexed driver, uint256 price, bool autoAccepted)",
+  "event Completed(uint256 indexed rideId, address indexed driver, uint256 price)",
+  "event Cancelled(uint256 indexed rideId)"
 ];
-const POLL_MS = 2500;
+// Delta polling: most ticks cost one eth_getLogs call instead of refetching every
+// ride + every bid every time. Full resync runs occasionally as a safety net.
+const POLL_MS = 2000;
+const FULL_RESYNC_MS = 30000;
+const MAX_LOG_RANGE = 5000; // defensive cap; Monad's 300ms blocks make this generous
 const PRESENT = new URLSearchParams(location.search).get("present") === "1";
 
 // ---- GBP pricing: users think in £, the chain settles in MON ----
@@ -296,12 +337,13 @@ async function fetchRate() {
 }
 
 // ================= STATE =================
-let role = "watch";
+let role = (function () { try { return localStorage.getItem("fairride_role") || "rider"; } catch (e) { return "rider"; } })();
 let rpcIndex = 0;
 let readProvider = new ethers.JsonRpcProvider(RPC_URLS[rpcIndex]);
 let readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
 let signer = null, myAddr = null, writeContract = null, mmConnected = false;
 let ridesCache = [];
+let lastBlock = null; // last block we've processed events through; null = need a full resync
 let pickMap = null, pickA = null, pickB = null, pickMarkers = [];
 let modalMapObj = null;
 
@@ -330,6 +372,60 @@ function distKm(a, b) {
   const R = 6371, dLa = (b.lat - a.lat) * Math.PI / 180, dLo = (b.lng - a.lng) * Math.PI / 180;
   const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+const MI_PER_KM = 0.621371;
+const miOf = (km) => km * MI_PER_KM;
+
+// ---- Reverse geocoding: pins become real places + postcodes ----
+// Nominatim (OpenStreetMap, same provider as our tiles). Cached in localStorage,
+// queued at their 1 req/sec limit, applied to the UI as results arrive.
+let geoCache = new Map();
+try { geoCache = new Map(JSON.parse(localStorage.getItem("fairride_geo") || "[]")); } catch (e) {}
+const geoKey = (lat, lng) => lat.toFixed(4) + "," + lng.toFixed(4);
+const geoQueue = [];
+let geoBusy = false;
+function queueGeo(lat, lng) {
+  const k = geoKey(lat, lng);
+  if (geoCache.has(k) || geoQueue.some(q => q.k === k)) return;
+  geoQueue.push({ k, lat, lng });
+  pumpGeo();
+}
+async function pumpGeo() {
+  if (geoBusy || !geoQueue.length) return;
+  geoBusy = true;
+  const { k, lat, lng } = geoQueue.shift();
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`);
+    const j = await r.json();
+    const a = j.address || {};
+    const name = a.neighbourhood || a.suburb || a.quarter || a.road || a.village || a.town || a.city_district || a.city || "";
+    geoCache.set(k, { name, pc: a.postcode || "" });
+    try { localStorage.setItem("fairride_geo", JSON.stringify([...geoCache])); } catch (e) {}
+    lastSig = null; render(true); // repaint with the resolved place
+  } catch (e) { geoCache.set(k, { name: "", pc: "" }); }
+  finally { geoBusy = false; setTimeout(pumpGeo, 1100); }
+}
+const GENERIC_PIN = /^pin$|pickup pin|drop-?off pin/i;
+// When a rider drops a pin, replace the placeholder with the real place name
+// as soon as Nominatim answers, so the posted ride carries a meaningful label.
+async function fillFromGeo(latlng, inputId, placeholder) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&zoom=16&addressdetails=1`);
+    const j = await r.json(); const a = j.address || {};
+    const name = a.neighbourhood || a.suburb || a.quarter || a.road || a.village || a.town || a.city || "";
+    geoCache.set(geoKey(latlng.lat, latlng.lng), { name, pc: a.postcode || "" });
+    try { localStorage.setItem("fairride_geo", JSON.stringify([...geoCache])); } catch (e) {}
+    const el = $(inputId);
+    if (name && el && el.value === placeholder) el.value = name;
+  } catch (e) { /* keep placeholder */ }
+}
+// Display label for a stop: real place for generic pins, postcode whenever known.
+function geoLabel(loc) {
+  if (loc.lat === null) return esc(loc.name);
+  const g = geoCache.get(geoKey(loc.lat, loc.lng));
+  if (!g) { queueGeo(loc.lat, loc.lng); return esc(loc.name); }
+  const base = GENERIC_PIN.test(loc.name.trim()) && g.name ? g.name : loc.name;
+  return esc(base) + (g.pc ? ` <span class="pc">${esc(g.pc)}</span>` : "");
 }
 
 // ================= WALLET =================
@@ -420,13 +516,13 @@ function initPickMap() {
     if (!pickA) {
       pickA = e.latlng;
       pickMarkers.push(L.marker(e.latlng).addTo(pickMap).bindPopup("Pickup").openPopup());
-      if (!$("fromLoc").value) $("fromLoc").value = "Pickup pin";
+      if (!$("fromLoc").value) { $("fromLoc").value = "Pickup pin"; fillFromGeo(e.latlng, "fromLoc", "Pickup pin"); }
     } else {
       pickB = e.latlng;
       pickMarkers.push(L.marker(e.latlng).addTo(pickMap).bindPopup("Drop-off").openPopup());
       pickMarkers.push(L.polyline([pickA, pickB], { color: "#0F2CB8", weight: 4, dashArray: "6 8" }).addTo(pickMap));
-      if (!$("toLoc").value) $("toLoc").value = "Drop-off pin";
-      toast("Journey set: " + distKm(pickA, pickB).toFixed(1) + " km");
+      if (!$("toLoc").value) { $("toLoc").value = "Drop-off pin"; fillFromGeo(e.latlng, "toLoc", "Drop-off pin"); }
+      toast("Journey set: " + miOf(distKm(pickA, pickB)).toFixed(1) + " mi");
     }
   });
   setTimeout(() => pickMap.invalidateSize(), 150);
@@ -437,7 +533,7 @@ function openMapForRide(id) {
   const a = parseLoc(r.fromLoc), b = parseLoc(r.toLoc);
   if (a.lat === null || b.lat === null) return toast("No map pins on this trip.");
   $("mapModal").style.display = "flex";
-  $("modalTitle").textContent = `#${id} · ${a.name} → ${b.name} · ${distKm(a, b).toFixed(1)} km`;
+  $("modalTitle").textContent = `#${id} · ${a.name} → ${b.name} · ${miOf(distKm(a, b)).toFixed(1)} mi`;
   if (modalMapObj) { modalMapObj.remove(); modalMapObj = null; }
   modalMapObj = L.map("modalMap");
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(modalMapObj);
@@ -452,25 +548,79 @@ function closeMap() { $("mapModal").style.display = "none"; if (modalMapObj) { m
 $("mapModal").addEventListener("click", (e) => { if (e.target.id === "mapModal") closeMap(); });
 
 // ================= READ LOOP =================
+// Real-time without refetching the world: each tick asks the chain "any new
+// events since the last block I saw?" (one eth_getLogs call). Only rides that
+// actually changed get refetched. A periodic full resync heals any drift.
+async function fetchRide(i) {
+  const r = await readContract.rides(i);
+  const bc = Number(await readContract.bidCount(i));
+  const bs = await Promise.all(Array.from({ length: bc }, (_, j) => readContract.bids(i, j)));
+  return { id: i, rider: r.rider.toLowerCase(), fromLoc: r.fromLoc, toLoc: r.toLoc,
+           maxPrice: r.maxPrice, expiry: r.expiry, status: Number(r.status),
+           driver: r.driver.toLowerCase(), agreedPrice: r.agreedPrice, deposit: r.deposit,
+           bids: bs.map((b, j) => ({ id: j, driver: b.driver.toLowerCase(), price: b.price, expiry: b.expiry, active: b.active })) };
+}
+function upsertRides(updated) {
+  const byId = new Map(ridesCache.map(r => [r.id, r]));
+  updated.forEach(r => byId.set(r.id, r));
+  ridesCache = [...byId.values()].sort((a, b) => b.id - a.id); // newest first
+}
+async function fullResync() {
+  const blockNow = await readProvider.getBlockNumber();
+  const n = Number(await readContract.rideCount());
+  const ids = Array.from({ length: n }, (_, i) => i);
+  const rides = await Promise.all(ids.map(fetchRide));
+  ridesCache = rides.reverse();
+  lastBlock = blockNow;
+  $("liveLabel").textContent = "live · " + n + " trips";
+  render();
+}
+let lastFullSync = 0;
+let refreshBusy = false;
+let failStreak = 0, nextTryAt = 0;
 async function refresh() {
+  if (refreshBusy) return; // never stack ticks on a slow RPC
+  if (Date.now() < nextTryAt) return; // backing off after failures — don't hammer a limited RPC
+  refreshBusy = true;
   try {
-    const n = Number(await readContract.rideCount());
-    $("liveLabel").textContent = "live · " + n + " trips";
-    const ids = Array.from({ length: n }, (_, i) => i);
-    const rides = await Promise.all(ids.map(async (i) => {
-      const r = await readContract.rides(i);
-      const bc = Number(await readContract.bidCount(i));
-      const bs = await Promise.all(Array.from({ length: bc }, (_, j) => readContract.bids(i, j)));
-      return { id: i, rider: r.rider.toLowerCase(), fromLoc: r.fromLoc, toLoc: r.toLoc,
-               maxPrice: r.maxPrice, expiry: r.expiry, status: Number(r.status),
-               driver: r.driver.toLowerCase(), agreedPrice: r.agreedPrice, deposit: r.deposit,
-               bids: bs.map((b, j) => ({ id: j, driver: b.driver.toLowerCase(), price: b.price, expiry: b.expiry, active: b.active })) };
-    }));
-    ridesCache = rides.reverse(); // newest first
+    if (lastBlock === null || Date.now() - lastFullSync > FULL_RESYNC_MS) {
+      await fullResync();
+      lastFullSync = Date.now();
+      return;
+    }
+    const blockNow = await readProvider.getBlockNumber();
+    if (blockNow <= lastBlock) return; // no new blocks, nothing can have changed
+    const from = Math.max(lastBlock + 1, blockNow - MAX_LOG_RANGE);
+    const logs = await readProvider.getLogs({ address: CONTRACT_ADDRESS, fromBlock: from, toBlock: blockNow });
+    lastBlock = blockNow;
+    if (!logs.length) return;
+    // Decode which rides the new events touched, refetch just those.
+    const touched = new Set();
+    let sawNewRide = false;
+    for (const lg of logs) {
+      try {
+        const p = readContract.interface.parseLog(lg);
+        if (!p) continue;
+        touched.add(Number(p.args.rideId));
+        if (p.name === "RidePosted") sawNewRide = true;
+      } catch (e) { /* unknown log, skip */ }
+    }
+    if (!touched.size) return;
+    const updated = await Promise.all([...touched].map(fetchRide));
+    upsertRides(updated);
+    $("liveLabel").textContent = "live · " + ridesCache.length + " trips";
+    if (sawNewRide && role === "driver") toast("New job just posted");
     render();
+    failStreak = 0;
   } catch (e) {
     $("liveLabel").textContent = "reconnecting…";
+    // Keep our delta position (lastBlock) so a transient failure only retries the
+    // cheap delta, and back off exponentially so we never hammer a limited RPC.
+    failStreak++;
+    nextTryAt = Date.now() + Math.min(1000 * 2 ** failStreak, 15000);
     rotateRpc();
+  } finally {
+    refreshBusy = false;
   }
 }
 
@@ -548,8 +698,8 @@ function distEta(r) {
 function routeStops(r) {
   const a = parseLoc(r.fromLoc), b = parseLoc(r.toLoc);
   return `<div class="route">
-    <div class="stop o"><span class="pin"></span><span class="place">${esc(a.name)}</span></div>
-    <div class="stop d"><span class="pin"></span><span class="place">${esc(b.name)}</span></div>
+    <div class="stop o"><span class="pin"></span><span class="place">${geoLabel(a)}</span></div>
+    <div class="stop d"><span class="pin"></span><span class="place">${geoLabel(b)}</span></div>
   </div>`;
 }
 function fareBlock(r) {
@@ -569,7 +719,13 @@ function statusBadge(r) {
 }
 function chipsRow(r) {
   const de = distEta(r); let c = "";
-  if (de) c += `<span class="chip">${IC.route}${de.km.toFixed(1)} km</span><span class="chip">${IC.timer}~${de.min} min</span>`;
+  if (de) {
+    const mi = miOf(de.km);
+    c += `<span class="chip">${IC.route}${mi.toFixed(1)} mi</span><span class="chip">${IC.timer}~${de.min} min</span>`;
+    // Price per mile on the fare that matters right now (agreed once matched, max while open)
+    const wei = r.status >= 1 ? r.agreedPrice : r.maxPrice;
+    if (mi > 0.05) c += `<span class="chip">£${((+ethers.formatEther(wei) * gbpPerMon) / mi).toFixed(2)}/mi</span>`;
+  }
   if (r.status === 0 && Number(r.expiry) > now()) c += `<span class="chip warn">${IC.clock}<span class="count" data-exp="${Number(r.expiry)}">${timeLeft(r.expiry)}</span></span>`;
   c += statusBadge(r);
   if (hasPins(r)) c += `<button class="chip mapbtn" onclick="openMapForRide(${r.id})">${IC.pin}Map</button>`;
@@ -608,14 +764,10 @@ function render(force) {
   const keepId = ae && ae.tagName === "INPUT" && ae.id ? ae.id : null;
   const keepVal = keepId ? ae.value : null;
   const keepPos = keepId ? ae.selectionStart : null;
-  ["riderView", "driverView", "watchView"].forEach(v => $(v).style.display = "none");
+  ["riderView", "driverView"].forEach(v => $(v).style.display = "none");
   $(role + "View").style.display = "";
   document.querySelectorAll("#roleTabs button").forEach(b => b.classList.toggle("active", b.dataset.role === role));
   if (role === "rider") { initPickMap(); setTimeout(() => { if (pickMap) pickMap.invalidateSize(); }, 80); }
-
-  $("watchRides").innerHTML = ridesCache.length ? ridesCache.map(r =>
-    `<article class="job">${rideHead(r)}${r.bids.length ? '<div class="bidstrip">' + r.bids.slice(-3).map(b => bidLine(r, b, false)).join("") + "</div>" : ""}</article>`
-  ).join("") : '<div class="empty">No trips yet. Be the first to post one.</div>';
 
   if (role === "rider") {
     const mine = ridesCache.filter(r => myAddr && r.rider === myAddr);
@@ -690,7 +842,24 @@ function renderPresent() {
 }
 
 // ================= INIT =================
-document.querySelectorAll("#roleTabs button").forEach(b => b.onclick = () => { role = b.dataset.role; render(); });
+function setRole(r) {
+  role = r;
+  try { localStorage.setItem("fairride_role", r); } catch (e) {}
+  lastSig = null; render(true);
+}
+document.querySelectorAll("#roleTabs button").forEach(b => b.onclick = () => setRole(b.dataset.role));
+// First visit: pick a side, like a real app. Returning users go straight in.
+(function () {
+  let seen = null;
+  try { seen = localStorage.getItem("fairride_role"); } catch (e) {}
+  if (!seen && !PRESENT) {
+    $("roleGate").classList.add("show");
+    document.querySelectorAll("#roleGate .gate-btn").forEach(b => b.onclick = () => {
+      $("roleGate").classList.remove("show");
+      setRole(b.dataset.pick);
+    });
+  }
+})();
 $("connectBtn").onclick = connect;
 $("instantBtn").onclick = instantConnect;
 $("postBtn").onclick = postRide;
@@ -703,6 +872,7 @@ setInterval(refreshBalance, 5000);
 updEscrowHint();
 fetchRate(); setInterval(fetchRate, 60000);
 if (CONTRACT_ADDRESS.startsWith("PASTE")) toast("⚠ Not wired to a contract yet — open this page as ?c=0xYourContractAddress after deploying.", 12000);
+render(true); // paint the shell immediately — never leave a blank page while the first sync runs
 refresh();
 setInterval(refresh, POLL_MS);
 // Tick only the countdown numbers every second — no DOM rebuild, so inputs never reset.
