@@ -318,6 +318,7 @@ const ABI = [
   "event Cancelled(uint256 indexed rideId)"
 ];
 const POLL_MS = 2000;
+const FETCH_CHUNK = 3; // rides fetched concurrently; keeps us under public RPC rate limits
 const PRESENT = new URLSearchParams(location.search).get("present") === "1";
 
 // ---- GBP pricing: users think in £, the chain settles in MON ----
@@ -578,6 +579,21 @@ function upsertRides(updated) {
   updated.forEach(r => byId.set(r.id, r));
   ridesCache = [...byId.values()].sort((a, b) => b.id - a.id); // newest first
 }
+// Persist the feed so a reload paints instantly instead of showing an empty
+// page while the first fetch runs. BigInts need explicit (de)serialization.
+const bigRe = /^\d+n$/;
+function saveRides() {
+  try { localStorage.setItem("fairride_rides", JSON.stringify(ridesCache, (k, v) => typeof v === "bigint" ? v.toString() + "n" : v)); } catch (e) {}
+}
+function loadRides() {
+  try {
+    const raw = localStorage.getItem("fairride_rides"); if (!raw) return;
+    const parsed = JSON.parse(raw, (k, v) => (typeof v === "string" && bigRe.test(v)) ? BigInt(v.slice(0, -1)) : v);
+    if (Array.isArray(parsed)) ridesCache = parsed;
+  } catch (e) {}
+}
+async function fetchRideSafe(i) { try { return await fetchRide(i); } catch (e) { return null; } }
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let refreshBusy = false;
 let failStreak = 0, nextTryAt = 0;
 // Every tick: one rideCount call, then refetch only rides that can still change
@@ -591,26 +607,36 @@ async function refresh() {
   refreshBusy = true;
   try {
     const n = Number(await readContract.rideCount());
+    $("liveLabel").textContent = "live · " + n + " trips";
     const known = new Map(ridesCache.map(r => [r.id, r]));
     const toFetch = [];
     let sawNew = false;
-    for (let i = 0; i < n; i++) {
+    // Newest first, so the jobs people care about appear in the first batch.
+    for (let i = n - 1; i >= 0; i--) {
       const k = known.get(i);
-      if (!k) { toFetch.push(i); sawNew = true; }           // brand-new ride
-      else if (k.status === 0 || k.status === 1) toFetch.push(i); // can still change
+      if (!k) { toFetch.push(i); if (known.size) sawNew = true; } // brand-new ride
+      else if (k.status === 0 || k.status === 1) toFetch.push(i);  // can still change
     }
-    if (toFetch.length) {
-      const updated = await Promise.all(toFetch.map(fetchRide));
-      upsertRides(updated);
+    // Fetch in small batches. Firing every ride at once exceeds the public RPC's
+    // ~50 req/s ceiling once the board grows, which used to fail the whole tick
+    // and leave the page frozen. Each batch renders as it lands, and a single
+    // bad ride can't take the rest down.
+    let anyFail = false;
+    for (let c = 0; c < toFetch.length; c += FETCH_CHUNK) {
+      const batch = toFetch.slice(c, c + FETCH_CHUNK);
+      const res = await Promise.all(batch.map(fetchRideSafe));
+      const ok = res.filter(Boolean);
+      if (ok.length < batch.length) anyFail = true;
+      if (ok.length) { upsertRides(ok); render(); saveRides(); }
+      if (c + FETCH_CHUNK < toFetch.length) await sleep(120); // stay under the rate limit
     }
-    $("liveLabel").textContent = "live · " + n + " trips";
-    if (sawNew && ridesCache.length && role === "driver" && known.size > 0) toast("New job just posted");
-    render();
-    failStreak = 0;
+    if (sawNew && role === "driver") toast("New job just posted");
+    if (anyFail) { failStreak++; nextTryAt = Date.now() + Math.min(800 * 2 ** failStreak, 8000); rotateRpc(); }
+    else failStreak = 0;
   } catch (e) {
     // Recover silently — the label keeps its last good state; the backoff heals.
     failStreak++;
-    nextTryAt = Date.now() + Math.min(1000 * 2 ** failStreak, 10000);
+    nextTryAt = Date.now() + Math.min(800 * 2 ** failStreak, 8000);
     rotateRpc();
   } finally {
     refreshBusy = false;
@@ -890,6 +916,7 @@ setInterval(refreshBalance, 5000);
 updEscrowHint();
 fetchRate(); setInterval(fetchRate, 60000);
 if (CONTRACT_ADDRESS.startsWith("PASTE")) toast("⚠ Not wired to a contract yet — open this page as ?c=0xYourContractAddress after deploying.", 12000);
+loadRides();  // last known feed from this device — instant paint, no empty page
 render(true); // paint the shell immediately — never leave a blank page while the first sync runs
 refresh();
 setInterval(refresh, POLL_MS);
